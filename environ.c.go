@@ -17,13 +17,14 @@ const (
 	JAVAObject
 )
 
-/* An environment consists of a pointer to a JNI environment
-and a caching map of class names to (globally referenced) class objects.
+/* 
 
-TODO: Handle references on other items (nominally) correctly.
+	An environment consists of a pointer to a JNI environment
+	and a caching map of class names to (globally referenced) class objects.
+	
+	TODO: Handle references on other items (nominally) correctly.
 
 */
-
 type Environment struct {
 	env             *C.JNIEnv
 	classes         map[string]*Class
@@ -54,9 +55,12 @@ func (self *Environment) getClassMethod(c *Class, static bool, mname string, rTy
 	return
 }
 
-// Suppress the java console barf of exceptions
+// (Un)Suppress the java console barf of exceptions
 // (execeptions are still caught, cleared and returned)
 func (self *Environment) Mute(mute bool) { self.quietExceptions = mute }
+
+// Returns the current state of the environmental exception mute.
+func (self *Environment) Muted()( bool) { return self.quietExceptions }
 
 // Refcounting is probably needed here, TODO: figure that out...
 func (self *Environment) utf8() C.jstring {
@@ -77,6 +81,9 @@ func NewEnvironment() *Environment {
 
 func (self Class) JavaType() int { return JAVAClass }
 
+/* represents JNI method call;  without subject, style & parameters,
+it is useless.  It (appears) to be an error to ref/unref methods.
+*/ 
 type Method struct {
 	method C.jmethodID
 }
@@ -90,6 +97,10 @@ func (self *Environment) findCachedClass(klass ClassName) (c *Class, err error) 
 	return
 }
 
+/* 
+	returns a new *Object of class 'java/lang/String', containing the (UTF16 reinterpreted)
+	representation of 's'.  Mostly a helper for passing strings into Java.
+*/
 func (self *Environment) NewStringObject(s string) (obj *Object, err error) {
 	if err == nil {
 		obj, err = self.NewInstanceStr("java/lang/String", []byte(s), self.utf8())
@@ -120,14 +131,20 @@ func (self *Environment) newByteObject(bts []byte) (o *Object, err error) {
 	return
 }
 
+/* 
+	returns a new *Object of the class named by 'klass' (Wrapper around NewInstance(NewClassName(...)))
+*/
 func (self *Environment) NewInstanceStr(klass string, params ...interface{}) (obj *Object, err error) {
-	class, err := self.FindClass(NewClassName(klass))
+	class, err := self.GetClass(NewClassName(klass))
 	if err != nil {
 		return
 	}
 	return self.NewInstance(class, params...)
 }
 
+/*
+	returns a new *Object of type *Class, using the constructor identified by []params
+*/
 func (self *Environment) NewInstance(c *Class, params ...interface{}) (o *Object, err error) {
 	meth, alp, err := self.getClassMethod(c, false, "<init>", BasicType(JavaVoidKind), params...)
 	//	meth, alp, err := self.getObjectMethod(newObject(self, c, C.jobject( c.class)), "<init>", BasicType(JavaVoidKind), params...)
@@ -144,10 +161,14 @@ func (self *Environment) NewInstance(c *Class, params ...interface{}) (o *Object
 	return
 }
 
-//jobject   envNewObjectA(JNIEnv *, jclass, jmethodID, jvalue *);
 
-
-func (self *Environment) FindClass(klass ClassName) (c *Class, err error) {
+// returns a Class object;  the object will first be looked up in cache,
+// and if not found there, resolved via Java and stored in the cache path.
+// classes returned via /THIS/ channel, need not be unrefed, as they all
+// hold a global ref.
+//
+// TODO: in truth, they should probably ALL be local-refs of the cached one...
+func (self *Environment) GetClass(klass ClassName) (c *Class, err error) {
 	c, err = self.findCachedClass(klass)
 	if err == nil {
 		return

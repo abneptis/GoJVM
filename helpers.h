@@ -1,6 +1,8 @@
 #include</usr/lib/jvm/java-6-sun-1.6.0.26/include/jni.h>
 #include<string.h>
 #include<stdlib.h>
+#include<libio.h>
+#include<unistd.h>
 
 
 #ifndef HELPERS_H

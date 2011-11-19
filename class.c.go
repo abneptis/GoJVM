@@ -8,6 +8,7 @@ import (
 	"unsafe"
 )
 
+/* represents a class (object) */
 type Class struct {
 	env    *Environment
 	_klass ClassName
@@ -18,6 +19,9 @@ func newClass(env *Environment, name ClassName, class C.jclass) *Class {
 	return &Class{env, name, class}
 }
 
+/*
+	returns the (potentially cached) ClassName of the class.
+*/
 func (self *Class) Name() (name ClassName, err error) {
 	if len(self._klass) == 0 {
 		log.Printf("ClassName(miss)")
@@ -33,6 +37,7 @@ func (self *Class) Name() (name ClassName, err error) {
 	return
 }
 
+// Calls the named void-method on the class
 func (self *Class) CallVoid(static bool, mname string, params ...interface{}) (err error) {
 	meth, args, err := self.env.getClassMethod(self, static, mname, BasicType(JavaVoidKind), params...)
 	if err != nil {
@@ -46,6 +51,7 @@ func (self *Class) CallVoid(static bool, mname string, params ...interface{}) (e
 
 }
 
+// Calls the named int-method on the class
 func (self *Class) CallInt(static bool, mname string, params ...interface{}) (i int, err error) {
 	meth, args, err := self.env.getClassMethod(self, static, mname, BasicType(JavaIntKind), params...)
 	if err != nil {
@@ -61,6 +67,7 @@ func (self *Class) CallInt(static bool, mname string, params ...interface{}) (i 
 	return
 }
 
+// Calls the named obj-method on the class
 func (self *Class) CallObj(static bool, mname string, rval JavaType, params ...interface{}) (vObj *Object, err error) {
 	meth, alp, err := self.env.getClassMethod(self, static, mname, rval, params...)
 	if err != nil {
@@ -82,9 +89,10 @@ func (self *Class) CallObj(static bool, mname string, rval JavaType, params ...i
 	return
 }
 
-/* A wrapper around ObjCallObj specific to java/lang/String, that will return the result as a GoString 
+/*
+	A wrapper around ObjCallObj specific to java/lang/String, that will return the result as a GoString 
 
-A null string returned with no exception can be identified in the wasNull return type.
+	A null string returned with no exception can be identified in the wasNull return type.
 */
 func (self *Class) CallString(static bool, mname string, params ...interface{}) (str string, wasNull bool, err error) {
 	strobj, err := self.CallObj(static, mname, ClassType{"java/lang/String"}, params...)

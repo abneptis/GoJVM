@@ -10,14 +10,20 @@ type Object struct {
 	object C.jobject
 }
 
+
+
+// returns a new object value with specified parameters
+// NB: refs are NOT adjusted directly by this call! Use it as a casting/construction-helper,
+// not a Clone()
 func newObject(env *Environment, klass *Class, obj C.jobject) *Object {
 	return &Object{env, klass, obj}
 }
 
-/* Returns the Class() associated with the object;
-If this was known at call, that value will be used,
-else it will be resolved through the environment into a 
-class type.
+/* 
+	Returns the Class() associated with the object;
+	If this was known at call, that value will be used,
+	else it will be resolved through the environment into a 
+	class type.
 */
 func (self *Object) ObjectClass() (c *Class, err error) {
 	if self._klass == nil {
@@ -29,6 +35,10 @@ func (self *Object) ObjectClass() (c *Class, err error) {
 	return
 }
 
+/*
+	Returns the (potentially cached) name of the ObjectClass of the
+	named object.
+*/
 func (self *Object) ClassName() (name ClassName, err error) {
 	c, err := self.ObjectClass()
 	if err == nil {
@@ -39,6 +49,7 @@ func (self *Object) ClassName() (name ClassName, err error) {
 
 func (self Object) JavaType() int { return JAVAObject }
 
+// Calls the named void-method on the object instance
 func (self *Object) CallVoid(static bool, mname string, params ...interface{}) (err error) {
 	meth, args, err := self.env.getObjectMethod(self, static, mname, BasicType(JavaVoidKind), params...)
 	if err != nil {
@@ -55,6 +66,7 @@ func (self *Object) CallVoid(static bool, mname string, params ...interface{}) (
 	return
 }
 
+// Calls the named int-method on the object instance
 func (self *Object) CallInt(static bool, mname string, params ...interface{}) (i int, err error) {
 	meth, args, err := self.env.getObjectMethod(self, static, mname, BasicType(JavaIntKind), params...)
 	if err != nil {
@@ -75,6 +87,7 @@ func (self *Object) CallInt(static bool, mname string, params ...interface{}) (i
 	return
 }
 
+// Calls the named Object-method on the object instance
 func (self *Object) CallObj(static bool, mname string, rval JavaType, params ...interface{}) (vObj *Object, err error) {
 	meth, alp, err := self.env.getObjectMethod(self, static, mname, rval, params...)
 	if err != nil {
@@ -96,9 +109,10 @@ func (self *Object) CallObj(static bool, mname string, rval JavaType, params ...
 	return
 }
 
-/* A wrapper around ObjCallObj specific to java/lang/String, that will return the result as a GoString 
+/* 
+	A wrapper around ObjCallObj specific to java/lang/String, that will return the result as a GoString 
 
-A null string returned with no exception can be identified in the wasNull return type.
+	A null string returned with no exception can be differentiated via the wasNull return value.
 */
 func (self *Object) CallString(static bool, mname string, params ...interface{}) (str string, wasNull bool, err error) {
 	strobj, err := self.CallObj(static, mname, ClassType{"java/lang/String"}, params...)
