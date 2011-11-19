@@ -44,6 +44,3 @@ java_classes: $(TESTING_JAVA) $(DIST_JAVA)
 
 %.class: %.java
 	javac $<
-
-#gojava.o: jvm_helpers.c
-#	gcc $(CGO_CFLAGS) $(_CGO_CFLAGS_$(GOARCH)) -fPIC $(CFLAGS) -c $^ -o $@
