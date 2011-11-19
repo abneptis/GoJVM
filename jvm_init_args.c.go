@@ -7,12 +7,14 @@ package gojvm
 //#include "helpers.h"
 import "C"
 import (
-	"os"
+	"errors"
 	"unsafe"
 )
 
-func DefaultJVMArgs(ver int)(args *C.JavaVMInitArgs, err os.Error){
-	if ver == 0 { ver = DEFAULT_JVM_VERSION }
+func DefaultJVMArgs(ver int) (args *C.JavaVMInitArgs, err error) {
+	if ver == 0 {
+		ver = DEFAULT_JVM_VERSION
+	}
 	args = new(C.JavaVMInitArgs)
 	//print("Default args\t", ver,"\n")
 	args.version = C.jint(ver)
@@ -21,12 +23,12 @@ func DefaultJVMArgs(ver int)(args *C.JavaVMInitArgs, err os.Error){
 	return
 }
 
-func AddStringArg(args *C.JavaVMInitArgs, s string)(err os.Error){
+func AddStringArg(args *C.JavaVMInitArgs, s string) (err error) {
 	cstr := C.CString(s)
 	defer C.free(unsafe.Pointer(cstr))
 	ok := C.addStringArgument(args, cstr)
 	if ok != 0 {
-		err = os.NewError("addStringArg failed")
+		err = errors.New("addStringArg failed")
 	}
 	return
 }

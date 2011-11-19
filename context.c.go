@@ -1,4 +1,4 @@
-package	gojvm
+package gojvm
 
 //#cgo LDFLAGS:-ljvm	-L/usr/lib/jvm/java-6-sun/jre/lib/amd64/server/
 //#include</usr/lib/jvm/java-6-sun-1.6.0.26/include/jni.h>
@@ -7,28 +7,24 @@ package	gojvm
 //#include <unistd.h>
 //#include "helpers.h"
 import "C"
-import (
+import
 //	"log"
-	"os"
-	"strings"
-)
+
+"strings"
 
 type Context struct {
-	jvm		*C.JavaVM
-	env		*Environment
-	classes	map[string]C.jclass
+	jvm     *C.JavaVM
+	env     *Environment
+	classes map[string]C.jclass
 }
 
-
-
-func newContext()(ctx	*Context){
+func newContext() (ctx *Context) {
 	ctx = &Context{}
 	ctx.env = NewEnvironment()
 	ctx.jvm = new(C.JavaVM)
 	ctx.classes = map[string]C.jclass{}
 	return
 }
-
 
 /*
 func (self *Context)CallVoid(obj *Object, meth string, params ...interface{})(err  os.Error){
@@ -52,21 +48,21 @@ func (self *Context)CallString(tgt *Object, meth string, params ...interface{})(
 }
 */
 
-func InitializeContext(args *C.JavaVMInitArgs)(ctx *Context, err os.Error){
+func InitializeContext(args *C.JavaVMInitArgs) (ctx *Context, err error) {
 	ctx = newContext()
 	//eptr := unsafe.Pointer(&ctx.env)
 	err = JVMError(C.newJVMContext(&ctx.jvm, &ctx.env.env, args))
 	return
 }
 
-func InitializeJVM(ver int, cpath []string)(ctx *Context, err os.Error){
+func InitializeJVM(ver int, cpath []string) (ctx *Context, err error) {
 	args, err := DefaultJVMArgs(ver)
 	if err != nil {
 		return
 	}
 	pathStr := strings.Join(cpath, ":")
 	//print("Adding class path\n")
-	err = AddStringArg(args, "-Djava.class.path=" + pathStr)
+	err = AddStringArg(args, "-Djava.class.path="+pathStr)
 	if err == nil {
 		//print("Initializing JVM Context\n")
 		ctx, err = InitializeContext(args)
