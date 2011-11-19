@@ -20,7 +20,7 @@ var simpleStringTests = []string{
 func TestJVMNewString( t *testing.T){
 	ctx := setupJVM(t)
 	for i, str := range(simpleStringTests){
-		jstr, err := ctx.env.NewStringObject(str)
+		jstr, err := ctx.Env.NewStringObject(str)
 		fatalIf(t, err != nil, "[%d] Couldn't NewString '%q'", i, str) 
 		
 		// length compare will fail on the UTF8 test, as length is 'runes' in java,

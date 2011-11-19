@@ -168,19 +168,6 @@ func (self *Environment) FindClass(klass ClassName) (c *Class, err error) {
 	return
 }
 
-func (self *Environment) FindClassMethod(class *Class, method, form string) (meth *Method, err error) {
-	cmethod := C.CString(method)
-	defer C.free(unsafe.Pointer(cmethod))
-	cform := C.CString(form)
-	defer C.free(unsafe.Pointer(cform))
-	m := C.envGetMethodID(self.env, class.class, cmethod, cform)
-	if m == nil {
-		err = self.exceptionOccurred()
-	} else {
-		meth = &Method{m}
-	}
-	return
-}
 
 func (self *Environment) getObjectClass(o *Object) (c *Class, err error) {
 	kl := C.envGetObjectClass(self.env, o.object)

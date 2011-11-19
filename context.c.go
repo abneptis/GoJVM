@@ -14,13 +14,13 @@ import
 
 type Context struct {
 	jvm     *C.JavaVM
-	env     *Environment
+	Env     *Environment
 	classes map[string]C.jclass
 }
 
 func newContext() (ctx *Context) {
 	ctx = &Context{}
-	ctx.env = NewEnvironment()
+	ctx.Env = NewEnvironment()
 	ctx.jvm = new(C.JavaVM)
 	ctx.classes = map[string]C.jclass{}
 	return
@@ -51,7 +51,7 @@ func (self *Context)CallString(tgt *Object, meth string, params ...interface{})(
 func InitializeContext(args *C.JavaVMInitArgs) (ctx *Context, err error) {
 	ctx = newContext()
 	//eptr := unsafe.Pointer(&ctx.env)
-	err = JVMError(C.newJVMContext(&ctx.jvm, &ctx.env.env, args))
+	err = JVMError(C.newJVMContext(&ctx.jvm, &ctx.Env.env, args))
 	return
 }
 

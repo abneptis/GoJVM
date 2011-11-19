@@ -42,10 +42,10 @@ var trivialClassTests = []trivialClassTest{
 func TestJVMTrivialClass( t *testing.T){
 	ctx := setupJVM(t)
 	for i, test := range(trivialClassTests){
-		form, err := formFor(ctx.env, BasicType(JavaVoidKind), test.ConstArgs...)
+		form, err := formFor(ctx.Env, BasicType(JavaVoidKind), test.ConstArgs...)
 		fatalIf(t, err != nil, "[%d] Error generating formFor: %v", i, err)
 		fatalIf(t, form == "", "Got nil form")
-		klass, err := ctx.env.NewInstanceStr(TrivialClass, test.ConstArgs...)
+		klass, err := ctx.Env.NewInstanceStr(TrivialClass, test.ConstArgs...)
 		fatalIf(t, err != nil, "[%d] Error generating formFor: %v", i, err)
 		kused, _, err := klass.CallString(false, "getConstructorUsed")
 		fatalIf(t, err != nil, "[%d] Error getting constructor used: %v", i, err)
@@ -60,14 +60,14 @@ func TestJVMTrivialClass( t *testing.T){
 
 func TestJVMPathosClass( t *testing.T){
 	ctx := setupJVM(t)
-	klass, err := ctx.env.NewInstanceStr(PathosClass)
+	klass, err := ctx.Env.NewInstanceStr(PathosClass)
 	fatalIf(t, klass != nil, "Pathos should throw an exception (be nil), but got %v", klass)
 	fatalIf(t, err == nil, "Pathos didn't throw an exception")
 }
 
 func TestJVMMissingClass( t *testing.T){
 	ctx := setupJVM(t)
-	klass, err := ctx.env.NewInstanceStr(MissingClass)
+	klass, err := ctx.Env.NewInstanceStr(MissingClass)
 	fatalIf(t, klass != nil, "Missing should throw an exception (be nil), but got %v", klass)
 	fatalIf(t, err == nil, "Missing didn't throw an exception")
 }
