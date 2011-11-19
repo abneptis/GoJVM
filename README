@@ -7,12 +7,27 @@ comes to mind).
 	Using GoJVM, a dynamically linked JVM can be loaded, and Java objects and classes can be manipulated,
 allowing Go to 'call into' instantiated classes, and manage portions of logic w/r/t Java.
 
+
+running
+=======
+	If (and you will), get errors about the binaries not able to find their libjni...so, you will need
+to export a dynamic-loader path.
+
+	Most systems do not ship with their native Java .so's on their dynamic load path.  On _my_ (debianish)
+system, commands that will load the JVM will need to be prefixed, simliar to:
+
+LD_LIBRARY_PATH=/usr/lib/jvm/default-java/jre/lib/amd64/server/		gotest
+
+	(alternatively, wrapped in a tiny shell script that does same)
+
+
 disclaimer
 ==========
 	- The local use case is very primative Java, so uses beyond are entirely unsupported (though patches welcome!)
 		- this can be mitigated with 'primitive shims' that re-state complex java ideas into something simpler for GoJVM to understand.
-	-	 
-	
+	- I can all but guarantee that there are bugs, crashes, and JVM nonos somewhere in the code.
+  - I am 100% certain that certain actions leak memory or references on the JVM side, so if this is a concern to you,
+be sure you understand JNI references better than I did when I started writing it :)
 
 reflection
 ==========

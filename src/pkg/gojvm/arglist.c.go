@@ -22,8 +22,10 @@ func (self *ArgList) Ptr() unsafe.Pointer {
 	return unsafe.Pointer(&((*self)[0]))
 }
 
+//	TODO(refcounting): any constructed objects will be leaked on call return, 
+//	as nothing cleans up proxy objects.  I'm also torn on how to differentiate
+//	the objects made here  and those coming in from other references.
 func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error) {
-	//fmt.Printf("newArgList: %+v\n", params...)
 	alp = make(ArgList, 0)
 	for i, param := range params {
 		var ok C.int
@@ -55,7 +57,6 @@ func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error
 		case []string:
 			var klass *Class
 			var	obj	  *Object
-			//var objA  C.jobjectArray
 		 	klass, err = ctx.GetClassStr("java/lang/String")
 			if err == nil {
 				obj, err = ctx.newObjectArray(len(v), klass, nil)
@@ -65,8 +66,15 @@ func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error
 					var str *Object
 					str, err = ctx.NewStringObject(s)
 					if err == nil {
+		  				// I'm assuming stuffing the array adds a reference inside the JVM.
+		  				defer ctx.LocalUnref(str)
 	  					ctx.setObjectArrayElement(obj, i, str)
-	  				} else {
+	  					if ctx.exceptionCheck(){
+	  						err = ctx.exceptionOccurred()
+	  					}
+	  					
+	  				}
+	  				if err != nil {
 	  					break
 	  				}
 				}
