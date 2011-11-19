@@ -61,6 +61,8 @@ func TypeOf(env *Environment, v interface{}) (k JavaType, err error) {
 		switch sltype.Kind() {
 		case reflect.Uint8:
 			k = ArrayType{BasicType(JavaByteKind)}
+		case reflect.String:
+			k = ArrayType{ClassType{"java/lang/String"}}
 		default:
 			err = errors.New("Unhandled slice type " + sltype.String())
 		}

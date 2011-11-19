@@ -52,6 +52,28 @@ func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error
 			if err == nil {
 				alp = append(alp, C.objValue(str.object))
 			}
+		case []string:
+			var klass *Class
+			var	obj	  *Object
+			//var objA  C.jobjectArray
+		 	klass, err = ctx.GetClassStr("java/lang/String")
+			if err == nil {
+				obj, err = ctx.newObjectArray(len(v), klass, nil)
+			}
+			if err == nil {
+				for i, s := range(v){
+					var str *Object
+					str, err = ctx.NewStringObject(s)
+					if err == nil {
+	  					ctx.setObjectArrayElement(obj, i, str)
+	  				} else {
+	  					break
+	  				}
+				}
+			}
+			if err == nil {
+				alp = append(alp, C.objValue(obj.object))
+			}
 		case []byte:
 			var obj *Object
 			obj, err = ctx.newByteObject(v)
@@ -65,7 +87,7 @@ func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error
 			}
 			alp = append(alp, C.boolValue(val))
 		default:
-			err = errors.New(fmt.Sprintf("Unknown type: %T", v))
+			err = errors.New(fmt.Sprintf("Unknown type: %T/%s", v, v))
 		}
 		if ok != 0 {
 			err = errors.New("Couldn't parse arg #" + strconv.Itoa(i+1))
