@@ -1,0 +1,5 @@
+tests
+=====
+	Will fail unless you've built (or distributed) the java class-files.
+	A trivial make implementation can be generated via 'gomake java_classes', and requires javac to be on PATH.
+	[ a patch/how to make 'gotest': depend on this would be appreciated]
