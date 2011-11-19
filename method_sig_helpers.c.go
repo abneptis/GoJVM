@@ -20,9 +20,8 @@ func TypeOf(env *Environment, v interface{}) (k JavaType, err error) {
 	case JavaType:
 		return vt, nil
 	case *Object:
-		var klass *Class
 		var name ClassName
-		klass, err = vt.ObjectClass()
+		klass, err := vt.ObjectClass()
 		if err == nil {
 			name, err = klass.Name()
 		}
