@@ -42,6 +42,14 @@ func (self *Environment) getObjectMethod(obj *Object, static bool, mname string,
 	return
 }
 
+func (self *Environment) defMute()(func()){
+	muted := self.Muted()
+	self.Mute(true)
+	return func(){
+		self.Mute(muted)
+	}
+}
+
 func (self *Environment) getClassMethod(c *Class, static bool, mname string, rType JavaType, params ...interface{}) (meth *Method, args ArgList, err error) {
 	if !static {
 		meth, err = self._classMethod(c, mname, rType, params...)
@@ -111,6 +119,23 @@ func (self *Environment) NewStringObject(s string) (obj *Object, err error) {
 		    	object: C.jobject(C.envNewStringUTF(self.env,cs)),
 		    }
 	*/
+	return
+}
+
+
+func (self *Environment) setObjectArrayElement(arr *Object, pos int, item *Object)(err error) {
+	C.envSetObjectArrayElement(self.env, arr.object, C.jint(pos), item.object)
+	return
+}
+
+func (self *Environment) newObjectArray(sz int, klass *Class, init C.jobject) (o *Object, err error) {
+	ja := C.envNewObjectArray(self.env, C.jint(sz), klass.class, init)
+	if ja == nil {
+		err = self.exceptionOccurred()
+	}
+	if err == nil {
+		o = newObject(self, klass, C.jobject(ja))
+	}
 	return
 }
 
@@ -185,6 +210,13 @@ func (self *Environment) GetClass(klass ClassName) (c *Class, err error) {
 		kl = C.jclass(C.envNewGlobalRef(self.env, kl))
 		c = newClass(self, klass, kl)
 		self.classes[klass.AsPath()] = c
+	}
+	return
+}
+func (self *Environment) GetClassStr(klass string) (c *Class, err error) {
+	class := NewClassName(klass)
+	if err == nil {
+		c, err = self.GetClass(class)
 	}
 	return
 }
