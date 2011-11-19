@@ -24,16 +24,16 @@ GOFILES=\
 	method_sig.go\
 
 CLEANFILES+=\
-	org/golang/ext/gojvm/*.class\
-	org/golang/ext/gojvm/testing/*.class\
+	java/org/golang/ext/gojvm/*.class\
+	java/org/golang/ext/gojvm/testing/*.class\
 
 TESTING_JAVA=\
-	org/golang/ext/gojvm/testing/Cleaner.class\
-	org/golang/ext/gojvm/testing/Pathos.class\
-	org/golang/ext/gojvm/testing/Trivial.class\
+	java/org/golang/ext/gojvm/testing/Cleaner.class\
+	java/org/golang/ext/gojvm/testing/Pathos.class\
+	java/org/golang/ext/gojvm/testing/Trivial.class\
 
 DIST_JAVA=\
-	org/golang/ext/gojvm/Invokable.class\
+	java/org/golang/ext/gojvm/Invokable.class\
 
 include /usr/share/go/src/Make.pkg
 
