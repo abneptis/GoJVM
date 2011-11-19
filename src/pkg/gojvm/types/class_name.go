@@ -1,4 +1,4 @@
-package gojvm
+package types
 
 import (
 	"strings"

@@ -1,33 +1,34 @@
-package gojvm
+package environment
 
+//#cgo CFLAGS:-I../include/
 //#cgo LDFLAGS:-ljvm	-L/usr/lib/jvm/java-6-sun/jre/lib/amd64/server/
-//#include</usr/lib/jvm/java-6-sun-1.6.0.26/include/jni.h>
 //#include "helpers.h"
 import "C"
 import (
 	"errors"
 	"fmt"
 	"reflect"
+	"gojvm/types"
 )
 
-func TypeOf(env *Environment, v interface{}) (k JavaType, err error) {
-	if kind, ok := v.(JavaType); ok {
+func TypeOf(env *Environment, v interface{}) (k types.Typed, err error) {
+	if kind, ok := v.(types.Typed); ok {
 		return kind, nil
 	}
 	switch vt := v.(type) {
 	case C.jstring:
-		return ClassType{"java/lang/String"}, nil
-	case JavaType:
+		return types.Class{"java/lang/String"}, nil
+	case types.Typed:
 		return vt, nil
 	case *Object:
 		var klass *Class
-		var name ClassName
+		var name types.ClassName
 		klass, err = vt.ObjectClass()
 		if err == nil {
 			name, err = klass.Name()
 		}
 		if err == nil {
-			k = ClassType{name.AsPath()}
+			k = types.Class{name.AsPath()}
 		}
 		return
 	}
@@ -37,32 +38,32 @@ func TypeOf(env *Environment, v interface{}) (k JavaType, err error) {
 	case reflect.Ptr:
 		k, err = TypeOf(env, reflect.Indirect(reflect.ValueOf(v)).Interface())
 	case reflect.Bool:
-		k = BasicType(JavaBoolKind)
+		k = types.Basic(types.BoolKind)
 	case reflect.Uint8, reflect.Int8:
-		k = BasicType(JavaByteKind)
+		k = types.Basic(types.ByteKind)
 	case reflect.Int16, reflect.Uint16:
-		k = BasicType(JavaShortKind)
+		k = types.Basic(types.ShortKind)
 	case reflect.Int32, reflect.Uint32:
-		k = BasicType(JavaIntKind)
+		k = types.Basic(types.IntKind)
 	case reflect.Uint64, reflect.Int64:
-		k = BasicType(JavaLongKind)
+		k = types.Basic(types.LongKind)
 	case reflect.Int, reflect.Uint:
-		k = BasicType(JavaIntKind)
+		k = types.Basic(types.IntKind)
 	case reflect.Float32:
-		k = BasicType(JavaFloatKind)
+		k = types.Basic(types.FloatKind)
 	case reflect.Float64:
-		k = BasicType(JavaDoubleKind)
+		k = types.Basic(types.DoubleKind)
 	case reflect.Struct:
-		k = ClassType{"golang/" + vkind.String()}
+		k = types.Class{"golang/" + vkind.String()}
 	case reflect.String:
-		k = ClassType{"java/lang/String"}
+		k = types.Class{"java/lang/String"}
 	case reflect.Slice, reflect.Array:
 		sltype := vtype.Elem()
 		switch sltype.Kind() {
 		case reflect.Uint8:
-			k = ArrayType{BasicType(JavaByteKind)}
+			k = types.ArrayType{types.Basic(types.ByteKind)}
 		case reflect.String:
-			k = ArrayType{ClassType{"java/lang/String"}}
+			k = types.ArrayType{types.Class{"java/lang/String"}}
 		default:
 			err = errors.New("Unhandled slice type " + sltype.String())
 		}

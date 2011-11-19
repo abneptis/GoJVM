@@ -4,6 +4,8 @@ package gojvm
  */
 import (
 	"testing"
+	"gojvm/environment"
+	"gojvm/types"
 )
 
 var TrivialClass = "org/golang/ext/gojvm/testing/Trivial"
@@ -41,7 +43,7 @@ var trivialClassTests = []trivialClassTest{
 func TestJVMTrivialClass(t *testing.T) {
 	ctx := setupJVM(t)
 	for i, test := range trivialClassTests {
-		form, err := formFor(ctx.Env, BasicType(JavaVoidKind), test.ConstArgs...)
+		form, err := environment.FormFor(ctx.Env, types.Basic(types.VoidKind), test.ConstArgs...)
 		fatalIf(t, err != nil, "[%d] Error generating formFor: %v", i, err)
 		fatalIf(t, form == "", "Got nil form")
 		klass, err := ctx.Env.NewInstanceStr(TrivialClass, test.ConstArgs...)
@@ -70,7 +72,7 @@ func TestJVMPathosClass(t *testing.T) {
 
 func TestJVMMissingClass(t *testing.T) {
 	ctx := setupJVM(t)
-	defer ctx.Env.defMute()()
+	defer defMute(ctx.Env)
 	// We mute expected exceptions because otherwise the test looks sloppy (and FAILS are hard to see)
 	klass, err := ctx.Env.NewInstanceStr(MissingClass)
 	fatalIf(t, klass != nil, "Missing should throw an exception (be nil), but got %v", klass)

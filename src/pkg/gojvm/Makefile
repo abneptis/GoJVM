@@ -4,27 +4,21 @@ TARG=gojvm
 
 JAVA_BASE=../../../java/
 
-#CFILES=jvm_helpers.c\
-#
+DEPS=\
+	environment\
+
 CGOFILES=\
-	arglist.c.go\
-	class.c.go\
 	consts.c.go\
-	context.c.go\
-	environ.c.go\
 	jvm_init_args.c.go\
 	jvm_helpers.c.go\
-	method_sig_helpers.c.go\
-	object.c.go\
+	context.c.go\
 
 CGO_OFILES=\
-	jvm_env_helpers.o\
 	jvm_init_helpers.o\
+#	jvm_env_helpers.o\
 
 GOFILES=\
-	class_name.go\
 	error.go\
-	method_sig.go\
 
 CLEANFILES+=\
 	$(JAVA_BASE)/org/golang/ext/gojvm/*.class\

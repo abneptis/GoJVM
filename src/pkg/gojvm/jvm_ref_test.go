@@ -3,17 +3,18 @@ package gojvm
 import (
 	"testing"
 	"time"
+	"gojvm/environment"
+	"gojvm/types"
 )
 
 var CleanerClass = "org/golang/ext/gojvm/testing/Cleaner"
 
 var SystemClass = "java/lang/System"
 
-func systemClass(ctx *Context, t *testing.T) (c *Class) {
-	obj, err := ctx.Env.NewInstanceStr(SystemClass)
+func systemClass(ctx *Context, t *testing.T) (c *environment.Class) {
+	c, err := ctx.Env.GetClassStr(SystemClass)
 	fatalIf(t, err != nil, "Error loading system class: %v", err)
-	fatalIf(t, obj._klass == nil, "Object has no class!: %+v", obj)
-	return obj._klass
+	return
 }
 
 func TestJVMRefCounting(t *testing.T) {
@@ -25,9 +26,9 @@ func TestJVMRefCounting(t *testing.T) {
 	fatalIf(t, err != nil, "Got an exception calling getDeadKids %v", err)
 	fatalIf(t, dead != 0, "Wrong number of dead kids: (Got: %d, exp: %d)", dead, 0)
 	for i := 0; i < 100; i++ {
-		obj, err := cleaner.CallObj(false, "NewChild", ClassType{CleanerClass + "$Cleanable"})
+		obj, err := cleaner.CallObj(false, "NewChild", types.Class{CleanerClass + "$Cleanable"})
 		fatalIf(t, err != nil, "Got an exception calling NewChild %v", err)
-		ctx.Env.LocalUnref(obj)
+		ctx.Env.DeleteLocalRef(obj)
 	}
 	err = system.CallVoid(true, "gc")
 	fatalIf(t, err != nil, "Got an exception calling gc() :%v", err)

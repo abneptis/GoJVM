@@ -5,6 +5,7 @@ package gojvm
 	of other tests regardless of other jvm_XX_test files
 */
 import (
+	"gojvm/environment"
 	"testing"
 	"flag"
 )
@@ -17,6 +18,27 @@ func fatalIf(t *testing.T, tv bool, msg string, args ...interface{}) {
 
 var _Ctx *Context
 var squelchExceptions bool /* = false */
+
+// used in testing;  a 'squelch' helper
+// such that:
+//  func X(){
+//    defer env.defMute()() /*note the double parens!!!*/
+//    doSomeJavaCall
+//  }
+//
+// would not output an exception to the console during processing
+// regardless othe explicit 'mutedness'.
+// there is a race condition here, but you're not supposed
+// to be using *Environment in multiple threads anyhow :P
+func defMute(env *environment.Environment)(func()){
+  muted := env.Muted()
+  env.Mute(true)
+  return func(){
+    env.Mute(muted)
+  }
+}
+
+
 
 
 func setupJVM(t *testing.T) *Context {
@@ -40,5 +62,6 @@ func TestJVMFirst(t *testing.T) { setupJVM(t) }
 
 
 func init(){
+	// this only works if you run it directly (not in the gotest framework, as it does not inherit options)
 	flag.BoolVar(&squelchExceptions, "squelch-ex", squelchExceptions, "Squelch unexpected exceptions from printing")
 }

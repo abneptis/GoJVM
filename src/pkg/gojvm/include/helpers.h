@@ -72,7 +72,7 @@ void			envReleaseByteArrayElements(JNIEnv *, jobject, jbyte *, jint);
 
 // internal helpers
 int		addStringArgument(JavaVMInitArgs *args, const char *string);
-jint	newJVMContext(JavaVM **, JNIEnv **, JavaVMInitArgs *);
+jint	newJVMContext(JavaVM **, void **, JavaVMInitArgs *);
 
 
 

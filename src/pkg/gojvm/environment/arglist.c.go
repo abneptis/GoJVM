@@ -1,4 +1,5 @@
-package gojvm
+package environment
+//#cgo CFLAGS:-I../include/
 //#cgo LDFLAGS:-ljvm	-L/usr/lib/jvm/java-6-sun/jre/lib/amd64/server/
 //#include "helpers.h"
 import "C"
@@ -12,9 +13,18 @@ import (
 
 // Implements the *C.jvalue pointer required
 // for passing arguments _into_ java.
-type ArgList []C.jvalue
+type argList []C.jvalue
 
-func (self *ArgList) Ptr() unsafe.Pointer {
+
+/// Returns an unsafe.Pointer to the arglist, suitable 
+/// for passing to the JNI xxxA() variadic methods.
+/// The pointer is only valid at the time it is returned,
+/// and changes to the underlying arglist could invalidate
+/// this list.
+///
+/// (If you're constructing w/o newArgList, be sure to use make(),
+/// in order to ensure the value references are aligned)
+func (self *argList) Ptr() unsafe.Pointer {
 	if self == nil || len(*self) == 0 {
 		//fmt.Printf("Returning a nil ptr!\n")
 		return nil
@@ -22,11 +32,30 @@ func (self *ArgList) Ptr() unsafe.Pointer {
 	return unsafe.Pointer(&((*self)[0]))
 }
 
+/* dereferences objects in a list, useful for deferrals */
+func blowStack(env *Environment, objs []*Object){
+	for _, obj := range(objs){
+		env.DeleteLocalRef(obj)
+	}
+}
+
+
 //	TODO(refcounting): any constructed objects will be leaked on call return, 
 //	as nothing cleans up proxy objects.  I'm also torn on how to differentiate
 //	the objects made here  and those coming in from other references.
-func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error) {
-	alp = make(ArgList, 0)
+//
+//	Refcounting attempt 1, objects _we_ construct will be returned in the objStack,
+//	otherwise refcounts of 'pass-through' java natives are untouched by the call to newArgList.
+//
+//	On error, the stack has already been blown (and will be empty).
+func newArgList(ctx *Environment, params ...interface{}) (alp argList, objStack []*Object, err error) {
+	alp = make(argList, 0)
+	defer func(){
+		if err != nil {
+			blowStack(ctx, objStack)
+			objStack = []*Object{}
+		}
+	}()
 	for i, param := range params {
 		var ok C.int
 		switch v := param.(type) {
@@ -52,25 +81,28 @@ func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error
 			var str *Object
 			str, err = ctx.NewStringObject(v)
 			if err == nil {
+				objStack = append(objStack, str)
 				alp = append(alp, C.objValue(str.object))
 			}
 		case []string:
 			var klass *Class
 			var	obj	  *Object
 		 	klass, err = ctx.GetClassStr("java/lang/String")
+		 	// classes via this channel are cached and globally referenced by gojvm, not stacked.
 			if err == nil {
 				obj, err = ctx.newObjectArray(len(v), klass, nil)
 			}
 			if err == nil {
+				objStack = append(objStack, obj)
 				for i, s := range(v){
 					var str *Object
 					str, err = ctx.NewStringObject(s)
 					if err == nil {
 		  				// I'm assuming stuffing the array adds a reference inside the JVM.
-		  				defer ctx.LocalUnref(str)
+		  				defer ctx.DeleteLocalRef(str)
 	  					ctx.setObjectArrayElement(obj, i, str)
-	  					if ctx.exceptionCheck(){
-	  						err = ctx.exceptionOccurred()
+	  					if ctx.ExceptionCheck(){
+	  						err = ctx.ExceptionOccurred()
 	  					}
 	  					
 	  				}
@@ -88,6 +120,7 @@ func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error
 			if err == nil {
 				alp = append(alp, C.objValue(obj.object))
 			}
+			objStack = append(objStack, obj)
 		case bool:
 			val := C.jboolean(C.JNI_FALSE)
 			if v {
@@ -107,15 +140,10 @@ func newArgList(ctx *Environment, params ...interface{}) (alp ArgList, err error
 	return
 }
 
+// Essentially, the java generic.  Type information is NOT carried
+// with the value, however is required for proper use.  (don't use
+// unless you know the distinction between jobject, jclass and jvalue).
 type Value struct {
 	val C.jvalue
 }
-/*
-func ValueOf(i interface{})(v Value, err os.Error){
-	switch i.(type) {
-		case bool:
-			val := C.JNI_FALSE
-			if i == true { val = C.JNI_TRUE }
-			v.val.z = C.jboolean(val)
-	}
-}*/
+

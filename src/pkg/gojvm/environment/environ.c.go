@@ -1,13 +1,11 @@
-package gojvm
+package environment
 
+//#cgo CFLAGS:-I../include/
 //#cgo LDFLAGS:-ljvm	-L/usr/lib/jvm/java-6-sun/jre/lib/amd64/server/
-//#include</usr/lib/jvm/java-6-sun-1.6.0.26/include/jni.h>
-//#include <stdlib.h>
-//#include <libio.h>
-//#include <unistd.h>
 //#include "helpers.h"
 import "C"
 import (
+	"gojvm/types"
 	"errors"
 	"unsafe"
 )
@@ -30,18 +28,36 @@ type Environment struct {
 	classes         map[string]*Class
 	quietExceptions bool
 	// various 'consts'
-	_UTF8 C.jstring // "UTF8" parameter
+	_UTF8 C.jstring 	// "UTF8" parameter
 }
 
-func (self *Environment) getObjectMethod(obj *Object, static bool, mname string, rType JavaType, params ...interface{}) (meth *Method, args ArgList, err error) {
+
+// Returns the underlying JNIEnv pointer.
+// (In practice you should not need this <g>)
+func (self *Environment) Ptr()(unsafe.Pointer){
+	return unsafe.Pointer(self.env)
+}
+
+func (self *Environment) getObjectMethod(obj *Object, static bool, mname string, rType types.Typed, params ...interface{}) (meth *Method, args argList, objList []*Object, err error) {
 	meth, err = self._objMethod(obj, mname, rType, params...)
 	if err != nil {
 		return
 	}
-	args, err = newArgList(self, params...)
+	args, objList, err = newArgList(self, params...)
 	return
 }
 
+// used in testing;  a 'squelch' helper
+// such that:
+//	func X(){
+// 		defer env.defMute()() /*note the double parens!!!*/
+// 		doSomeJavaCall
+//	}
+//
+// would not output an exception to the console during processing
+// regardless othe explicit 'mutedness'.
+// there is a race condition here, but you're not supposed
+// to be using *Environment in multiple threads anyhow :P
 func (self *Environment) defMute()(func()){
 	muted := self.Muted()
 	self.Mute(true)
@@ -50,7 +66,7 @@ func (self *Environment) defMute()(func()){
 	}
 }
 
-func (self *Environment) getClassMethod(c *Class, static bool, mname string, rType JavaType, params ...interface{}) (meth *Method, args ArgList, err error) {
+func (self *Environment) getClassMethod(c *Class, static bool, mname string, rType types.Typed, params ...interface{}) (meth *Method, args argList, objList []*Object, err error) {
 	if !static {
 		meth, err = self._classMethod(c, mname, rType, params...)
 	} else {
@@ -59,7 +75,7 @@ func (self *Environment) getClassMethod(c *Class, static bool, mname string, rTy
 	if err != nil {
 		return
 	}
-	args, err = newArgList(self, params...)
+	args, objList, err = newArgList(self, params...)
 	return
 }
 
@@ -87,7 +103,7 @@ func NewEnvironment() *Environment {
 	}
 }
 
-func (self Class) JavaType() int { return JAVAClass }
+func (self Class) Kind() types.Kind { return types.ClassKind }
 
 /* represents JNI method call;  without subject, style & parameters,
 it is useless.  It (appears) to be an error to ref/unref methods.
@@ -96,11 +112,11 @@ type Method struct {
 	method C.jmethodID
 }
 
-func (self *Environment) findCachedClass(klass ClassName) (c *Class, err error) {
+func (self *Environment) findCachedClass(klass types.ClassName) (c *Class, err error) {
 	if class, ok := self.classes[klass.AsPath()]; ok {
 		c = class
 	} else {
-		err = ErrUnknownClass // not technically an exception, but shouldn't bubble either.
+		err = errors.New("cache miss")
 	}
 	return
 }
@@ -131,7 +147,7 @@ func (self *Environment) setObjectArrayElement(arr *Object, pos int, item *Objec
 func (self *Environment) newObjectArray(sz int, klass *Class, init C.jobject) (o *Object, err error) {
 	ja := C.envNewObjectArray(self.env, C.jint(sz), klass.class, init)
 	if ja == nil {
-		err = self.exceptionOccurred()
+		err = self.ExceptionOccurred()
 	}
 	if err == nil {
 		o = newObject(self, klass, C.jobject(ja))
@@ -157,10 +173,10 @@ func (self *Environment) newByteObject(bts []byte) (o *Object, err error) {
 }
 
 /* 
-	returns a new *Object of the class named by 'klass' (Wrapper around NewInstance(NewClassName(...)))
+	returns a new *Object of the class named by 'klass' (Wrapper around NewInstance(types.NewClassName(...)))
 */
 func (self *Environment) NewInstanceStr(klass string, params ...interface{}) (obj *Object, err error) {
-	class, err := self.GetClass(NewClassName(klass))
+	class, err := self.GetClass(types.NewClassName(klass))
 	if err != nil {
 		return
 	}
@@ -171,17 +187,17 @@ func (self *Environment) NewInstanceStr(klass string, params ...interface{}) (ob
 	returns a new *Object of type *Class, using the constructor identified by []params
 */
 func (self *Environment) NewInstance(c *Class, params ...interface{}) (o *Object, err error) {
-	meth, alp, err := self.getClassMethod(c, false, "<init>", BasicType(JavaVoidKind), params...)
+	meth, alp, localStack, err := self.getClassMethod(c, false, "<init>", types.Basic(types.VoidKind), params...)
 	//	meth, alp, err := self.getObjectMethod(newObject(self, c, C.jobject( c.class)), "<init>", BasicType(JavaVoidKind), params...)
-	if err != nil {
-		return
-	}
+	if err != nil { return }
+	defer blowStack(self, localStack)
+
 	obj := C.envNewObjectA(self.env, c.class, meth.method, alp.Ptr())
 	if obj != nil {
 		obj = C.envNewGlobalRef(self.env, obj)
 		o = newObject(self, c, obj)
 	} else {
-		err = self.exceptionOccurred()
+		err = self.ExceptionOccurred()
 	}
 	return
 }
@@ -193,7 +209,7 @@ func (self *Environment) NewInstance(c *Class, params ...interface{}) (o *Object
 // hold a global ref.
 //
 // TODO: in truth, they should probably ALL be local-refs of the cached one...
-func (self *Environment) GetClass(klass ClassName) (c *Class, err error) {
+func (self *Environment) GetClass(klass types.ClassName) (c *Class, err error) {
 	c, err = self.findCachedClass(klass)
 	if err == nil {
 		return
@@ -203,7 +219,7 @@ func (self *Environment) GetClass(klass ClassName) (c *Class, err error) {
 	// print("envFindClass ", klass,"\n")
 	kl := C.envFindClass(self.env, s)
 	if kl == nil {
-		err = self.exceptionOccurred()
+		err = self.ExceptionOccurred()
 	} else {
 		err = nil // clear the cache error
 		// print("found ", klass,"\n")
@@ -213,27 +229,33 @@ func (self *Environment) GetClass(klass ClassName) (c *Class, err error) {
 	}
 	return
 }
+
+// Wrapper around GetClass(types.NewClassName(...))
 func (self *Environment) GetClassStr(klass string) (c *Class, err error) {
-	class := NewClassName(klass)
-	if err == nil {
-		c, err = self.GetClass(class)
-	}
-	return
+	class := types.NewClassName(klass)
+	return self.GetClass(class)
 }
 
-func (self *Environment) getObjectClass(o *Object) (c *Class, err error) {
+func (self *Environment) GetObjectClass(o *Object) (c *Class, err error) {
 	kl := C.envGetObjectClass(self.env, o.object)
 	if kl == nil {
-		err = self.exceptionOccurred()
+		err = self.ExceptionOccurred()
 	} else {
-		c = self.LocalRefClass(newClass(self, nil, /*TODO: nil's probably not the best..*/ kl))
+		/*
+			TODO: nil's probably not the best, we could (maybe?) keep a global ref to 'java/lang/Class',
+			or doing a recursive call (icky error handling tho).
+			
+			For now, we nil it and users will end up with a re;eated call
+			to GOC if they need the classes class for some operation....
+		*/
+		c = self.NewLocalClassRef(newClass(self, nil, kl))
 	}
 	return
 }
 
-func (self *Environment) _objMethod(obj *Object, name string, jt JavaType, params ...interface{}) (meth *Method, err error) {
-	class, err := self.getObjectClass(obj)
-	defer self.LocalUnrefClass(class)
+func (self *Environment) _objMethod(obj *Object, name string, jt types.Typed, params ...interface{}) (meth *Method, err error) {
+	class, err := self.GetObjectClass(obj)
+	defer self.DeleteLocalClassRef(class)
 	if err != nil {
 		return
 	}
@@ -249,7 +271,7 @@ func (self *Environment) _objMethod(obj *Object, name string, jt JavaType, param
 
 	m := C.envGetMethodID(self.env, class.class, cmethod, cform)
 	if m == nil {
-		err = self.exceptionOccurred()
+		err = self.ExceptionOccurred()
 	} else {
 		meth = &Method{m}
 	}
@@ -257,7 +279,7 @@ func (self *Environment) _objMethod(obj *Object, name string, jt JavaType, param
 
 }
 
-func (self *Environment) _classMethod(class *Class, name string, jt JavaType, params ...interface{}) (meth *Method, err error) {
+func (self *Environment) _classMethod(class *Class, name string, jt types.Typed, params ...interface{}) (meth *Method, err error) {
 	form, err := formFor(self, jt, params...)
 	if err != nil {
 		return
@@ -271,14 +293,14 @@ func (self *Environment) _classMethod(class *Class, name string, jt JavaType, pa
 	//print("Looking for ", name, "\t", form, "\t in ", cname.AsPath(), "\n")
 	m := C.envGetMethodID(self.env, class.class, cmethod, cform)
 	if m == nil {
-		err = self.exceptionOccurred()
+		err = self.ExceptionOccurred()
 	} else {
 		meth = &Method{m}
 	}
 	return
 }
 
-func (self *Environment) _classStaticMethod(class *Class, name string, jt JavaType, params ...interface{}) (meth *Method, err error) {
+func (self *Environment) _classStaticMethod(class *Class, name string, jt types.Typed, params ...interface{}) (meth *Method, err error) {
 	form, err := formFor(self, jt, params...)
 	if err != nil {
 		return
@@ -292,7 +314,7 @@ func (self *Environment) _classStaticMethod(class *Class, name string, jt JavaTy
 	//print("Looking for (static)", name, "\t", form, "\t in ", cname.AsPath(), "\n")
 	m := C.envGetStaticMethodID(self.env, class.class, cmethod, cform)
 	if m == nil {
-		err = self.exceptionOccurred()
+		err = self.ExceptionOccurred()
 	} else {
 		meth = &Method{m}
 	}
@@ -307,7 +329,13 @@ func (self *Exception) Error() string {
 	return "{JavaException:<TODO>}"
 }
 
-func (self *Environment) exceptionOccurred() (ex *Exception) {
+/*
+	JNI documentation is unclear on the semantics of calling this
+	when an exception has NOT occurred (e.g., is not indicated by
+	a NULL value), but logic dictates that it _should_ be safe
+	to call;  In that event, nil (should) be returned. 
+*/
+func (self *Environment) ExceptionOccurred() (ex *Exception) {
 	throwable := C.envExceptionOccurred(self.env)
 	if throwable != nil {
 		ex = &Exception{throwable}
@@ -319,40 +347,36 @@ func (self *Environment) exceptionOccurred() (ex *Exception) {
 	return
 }
 
-func (self *Environment) exceptionCheck() bool {
+// Returns true if an ExceptionOccurred in this thread
+// should produce a non-nil *Exception
+func (self *Environment) ExceptionCheck() bool {
 	return (C.envExceptionCheck(self.env) != C.JNI_FALSE)
 }
 
 // Syntactic sugar around &Class{C.jclass(LocalRef(&Object{C.jobject(class.class)}))}
-func (self *Environment) LocalRefClass(c *Class) *Class {
+func (self *Environment) NewLocalClassRef(c *Class) *Class {
 	return newClass(self, c._klass, C.jclass(C.envNewLocalRef(self.env, c.class)))
 }
 
 // Syntactic sugar around LocalUnref(&Object{C.jobject(class.class)})
-func (self *Environment) LocalUnrefClass(c *Class) {
+func (self *Environment) DeleteLocalClassRef(c *Class) {
 	C.envDeleteLocalRef(self.env, c.class)
 }
 
 // Adds a 'local' ref to the JVM for Object, and returns an object that is contains reference
-func (self *Environment) LocalRef(o *Object) *Object {
+func (self *Environment) NewLocalRef(o *Object) *Object {
 	return newObject(self, o._klass, C.envNewLocalRef(self.env, o.object))
 }
 
 // Release a local reference (returned from LocalRef) back to the JVM
-func (self *Environment) LocalUnref(o *Object) {
+func (self *Environment) DeleteLocalRef(o *Object) {
 	C.envDeleteLocalRef(self.env, o.object)
 }
 
-func (self *Environment) GlobalRef(o *Object) *Object {
+// As gojvm is typically the /hosting/ context,
+// a global reference in gojvm is more of a 'dont bother GC'ing this,
+// I'm going to lose it somewhere in my stack',
+// and as such should be use sparingly
+func (self *Environment) NewGlobalRef(o *Object) *Object {
 	return newObject(self, o._klass, C.envNewGlobalRef(self.env, o.object))
 }
-
-/*
-func (self *Environment)NewInstance(klass string, params ...interface{})(obj *Object, err os.Error){
-	obj, err = env.NewString(klass, params...)
-	return
-}*/
-
-/*func (self *Context)NewString(s string)(obj *Object, err os.Error){
-	return self.env.NewStringObject(s)
-}*/
