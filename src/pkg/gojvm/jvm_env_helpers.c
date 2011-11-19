@@ -108,6 +108,15 @@ jbyteArray  envNewByteArray(JNIEnv *env, jsize len){
 	return (*env)->NewByteArray(env,len);
 }
 
+jobjectArray  envNewObjectArray(JNIEnv *env, jsize len, jclass klass, jobject init){
+	return (*env)->NewObjectArray(env,len, klass, init);
+}
+
+void envSetObjectArrayElement(JNIEnv *env, jobjectArray array, jsize index, jobject val){
+	(*env)->SetObjectArrayElement(env, array, index, val);
+}
+
+
 jstring   envNewStringUTF(JNIEnv *env, const char *s){
 	return (*env)->NewStringUTF(env, s);
 }

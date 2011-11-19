@@ -41,6 +41,9 @@ void			envReleaseStringUTFChars(JNIEnv *, jstring, const char *);
 
 
 
+jobjectArray	envNewObjectArray(JNIEnv *env, jsize, jclass, jobject);
+void 					envSetObjectArrayElement(JNIEnv *env, jobjectArray array, jsize index, jobject val);
+
 jbyteArray	envNewByteArray(JNIEnv *env, jsize len);
 void 				envSetByteArrayRegion(JNIEnv *env, jbyteArray array, jsize start, jsize len, const void *buf); 
 
