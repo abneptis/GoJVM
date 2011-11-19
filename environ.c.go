@@ -264,7 +264,7 @@ type Exception struct {
 	ex C.jthrowable
 }
 
-func (self *Exception) String() string {
+func (self *Exception) Error() string {
 	return "{JavaException:<TODO>}"
 }
 
