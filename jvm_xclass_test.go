@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var TrivialClass = "cc/qwe/gojvm/Trivial"
+var TrivialClass = "org/golang/ext/gojvm/Trivial"
 /* Provides a variety of constructors, and one niladic getConstructorUsed;
 
 Verifies:
@@ -15,7 +15,7 @@ Verifies:
 	Marshalling (int,int64,string,{})
 */
 
-var PathosClass = "cc/qwe/gojvm/Pathos"
+var PathosClass = "org/golang/ext/gojvm/Pathos"
 /* Throws an exception on construction;
 Verifies, exception on obj.New()
 */
@@ -25,7 +25,7 @@ Verifies, exception on obj.New()
 Verifies:
 	Exception for missing class	
 */
-var MissingClass = "cc/qwe/gojvm/MissingClass"
+var MissingClass = "org/golang/ext/MissingClass"
 
 type trivialClassTest struct {
 	ConstArgs []interface{}

@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var CleanerClass = "cc/qwe/gojvm/Cleaner"
+var CleanerClass = "org/golang/ext/gojvm/Cleaner"
 
 var SystemClass = "java/lang/System"
 
