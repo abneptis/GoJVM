@@ -18,11 +18,19 @@ reflection
 ==========
 	Fairly weak right now, but support for basic types & very basic slices are supported
 
+sizes
+=====
+	We make certain assumptions in reflection: that a go int can be casted to a java int (same for long, etc).
+On my system they seem to prove nominally fine (so far), but tests have not been written that really excercise
+boundary conditions on types.
+
 strings
 =======
 	Java uses UTF-16, Go uses UTF-8;  When using the CallString and other functions, all references
 and conversions are handled, otherwise the user of the Object is responsible for dereferencing and
 UTF conversions.
+
+
 
 tests
 =====
