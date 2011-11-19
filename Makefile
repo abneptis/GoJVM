@@ -23,17 +23,24 @@ GOFILES=\
 	error.go\
 	method_sig.go\
 
-#CLEANFILES+=\
-#	tester\
-#	tester.o\
-#
+CLEANFILES+=\
+	org/golang/ext/gojvm/*.class\
+	org/golang/ext/gojvm/testing/*.class\
+
+TESTING_JAVA=\
+	org/golang/ext/gojvm/testing/Cleaner.class\
+	org/golang/ext/gojvm/testing/Pathos.class\
+	org/golang/ext/gojvm/testing/Trivial.class\
+
+DIST_JAVA=\
+	org/golang/ext/gojvm/Invokable.class\
 
 include /usr/share/go/src/Make.pkg
 
-tester:	../../cmd/vmloader/main.go
-	$(GC)	-o	$@.6 $<
-	$(LD)	-o $@	$@.6
+java_classes: $(TESTING_JAVA) $(DIST_JAVA)
 
+%.class: %.java
+	javac $<
 
 #gojava.o: jvm_helpers.c
 #	gcc $(CGO_CFLAGS) $(_CGO_CFLAGS_$(GOARCH)) -fPIC $(CFLAGS) -c $^ -o $@

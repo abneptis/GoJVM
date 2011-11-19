@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var TrivialClass = "org/golang/ext/gojvm/Trivial"
+var TrivialClass = "org/golang/ext/gojvm/testing/Trivial"
 /* Provides a variety of constructors, and one niladic getConstructorUsed;
 
 Verifies:
@@ -15,7 +15,7 @@ Verifies:
 	Marshalling (int,int64,string,{})
 */
 
-var PathosClass = "org/golang/ext/gojvm/Pathos"
+var PathosClass = "org/golang/ext/gojvm/testing/Pathos"
 /* Throws an exception on construction;
 Verifies, exception on obj.New()
 */

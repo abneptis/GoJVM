@@ -1,4 +1,4 @@
-package org.golang.ext.gojvm;
+package org.golang.ext.gojvm.testing;
 
 class Trivial {
 	String	ConstructorUsed;
