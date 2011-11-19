@@ -1,5 +1,39 @@
+what??
+======
+	Sometimes a tiny (or substantial) bit of data exists in a 'Java' world;  This might include 
+3rd-party Java libraries, or an implementation that go's not ready to handle yet ('extreme XML'
+comes to mind).
+
+	Using GoJVM, a dynamically linked JVM can be loaded, and Java objects and classes can be manipulated,
+allowing Go to 'call into' instantiated classes, and manage portions of logic w/r/t Java.
+
+disclaimer
+==========
+	- The local use case is very primative Java, so uses beyond are entirely unsupported (though patches welcome!)
+		- this can be mitigated with 'primitive shims' that re-state complex java ideas into something simpler for GoJVM to understand.
+	-	 
+	
+
+reflection
+==========
+	Fairly weak right now, but support for basic types & very basic slices are supported
+
+strings
+=======
+	Java uses UTF-16, Go uses UTF-8;  When using the CallString and other functions, all references
+and conversions are handled, otherwise the user of the Object is responsible for dereferencing and
+UTF conversions.
+
 tests
 =====
 	Will fail unless you've built (or distributed) the java class-files.
 	A trivial make implementation can be generated via 'gomake java_classes', and requires javac to be on PATH.
 	[ a patch/how to make 'gotest': depend on this would be appreciated]
+
+threading
+====
+	Don't do it on the JVM thread(!?);  Based on JNI documentation, it's probably unsafe to do so without
+a distinct environment pointer, and I've not tried to deal with that yet.
+
+
+
