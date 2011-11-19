@@ -1,4 +1,4 @@
-package cc.qwe.gojvm;
+package org.golang.ext.gojvm;
 
 class Pathos {
 	Pathos() throws Exception {
