@@ -70,10 +70,8 @@ func TestJVMPathosClass(t *testing.T) {
 
 func TestJVMMissingClass(t *testing.T) {
 	ctx := setupJVM(t)
+	defer ctx.Env.defMute()()
 	// We mute expected exceptions because otherwise the test looks sloppy (and FAILS are hard to see)
-	muted := ctx.Env.Muted()
-	defer ctx.Env.Mute(muted)
-	ctx.Env.Mute(true)
 	klass, err := ctx.Env.NewInstanceStr(MissingClass)
 	fatalIf(t, klass != nil, "Missing should throw an exception (be nil), but got %v", klass)
 	fatalIf(t, err == nil, "Missing didn't throw an exception")

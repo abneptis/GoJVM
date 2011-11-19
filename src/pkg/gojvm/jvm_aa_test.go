@@ -4,7 +4,10 @@ package gojvm
 	We also include the first SetupJVM call in here, so that it will not skew the timing
 	of other tests regardless of other jvm_XX_test files
 */
-import "testing"
+import (
+	"testing"
+	"flag"
+)
 
 func fatalIf(t *testing.T, tv bool, msg string, args ...interface{}) {
 	if tv {
@@ -13,6 +16,8 @@ func fatalIf(t *testing.T, tv bool, msg string, args ...interface{}) {
 }
 
 var _Ctx *Context
+var squelchExceptions bool /* = false */
+
 
 func setupJVM(t *testing.T) *Context {
 	if _Ctx != nil {
@@ -32,3 +37,8 @@ func setupJVM(t *testing.T) *Context {
 
 // so the timing of other tests/bench's isn't thrown.
 func TestJVMFirst(t *testing.T) { setupJVM(t) }
+
+
+func init(){
+	flag.BoolVar(&squelchExceptions, "squelch-ex", squelchExceptions, "Squelch unexpected exceptions from printing")
+}
