@@ -23,7 +23,9 @@ func setupJVM(t *testing.T) *Context {
 	_Ctx, err = InitializeJVM(0, []string{"../../../java/", DefaultJREPath})
 	fatalIf(t, err != nil, "Error initializing JVM: %v", err)
 	fatalIf(t, _Ctx == nil, "Got a nil context!")
-	// if you do(n't) like the java-exception noise in your tests, (un)comment: 
+	// expected exceptions are pre-muted/unmuted, but if you're testing something
+	// that causes them to throw, and want readable tests, this is the line
+	// to uncomment.
 	//_Ctx.env.Mute(true)
 	return _Ctx
 }
