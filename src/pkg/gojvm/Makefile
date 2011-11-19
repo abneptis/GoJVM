@@ -1,6 +1,9 @@
 include /usr/share/go/src/Make.inc
 TARG=gojvm
 
+
+JAVA_BASE=../../../java/
+
 #CFILES=jvm_helpers.c\
 #
 CGOFILES=\
@@ -24,16 +27,16 @@ GOFILES=\
 	method_sig.go\
 
 CLEANFILES+=\
-	java/org/golang/ext/gojvm/*.class\
-	java/org/golang/ext/gojvm/testing/*.class\
+	$(JAVA_BASE)/org/golang/ext/gojvm/*.class\
+	$(JAVA_BASE)/org/golang/ext/gojvm/testing/*.class\
 
 TESTING_JAVA=\
-	java/org/golang/ext/gojvm/testing/Cleaner.class\
-	java/org/golang/ext/gojvm/testing/Pathos.class\
-	java/org/golang/ext/gojvm/testing/Trivial.class\
+	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Cleaner.class\
+	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Pathos.class\
+	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Trivial.class\
 
 DIST_JAVA=\
-	java/org/golang/ext/gojvm/Invokable.class\
+	$(JAVA_BASE)/org/golang/ext/gojvm/Invokable.class\
 
 include /usr/share/go/src/Make.pkg
 

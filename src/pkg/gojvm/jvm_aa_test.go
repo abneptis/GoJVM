@@ -18,9 +18,9 @@ func setupJVM(t *testing.T) *Context {
 	if _Ctx != nil {
 		return _Ctx
 	}
-	t.Logf("Testing -- using classpath [./java/,%s", DefaultJREPath)
+	t.Logf("Testing -- using classpath [../../../java/,%s", DefaultJREPath)
 	var err error
-	_Ctx, err = InitializeJVM(0, []string{"./java/", DefaultJREPath})
+	_Ctx, err = InitializeJVM(0, []string{"../../../java/", DefaultJREPath})
 	fatalIf(t, err != nil, "Error initializing JVM: %v", err)
 	fatalIf(t, _Ctx == nil, "Got a nil context!")
 	// if you do(n't) like the java-exception noise in your tests, (un)comment: 
