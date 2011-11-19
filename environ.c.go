@@ -168,7 +168,6 @@ func (self *Environment) FindClass(klass ClassName) (c *Class, err error) {
 	return
 }
 
-
 func (self *Environment) getObjectClass(o *Object) (c *Class, err error) {
 	kl := C.envGetObjectClass(self.env, o.object)
 	if kl == nil {
@@ -251,7 +250,7 @@ type Exception struct {
 	ex C.jthrowable
 }
 
-func (self *Exception) Error () string {
+func (self *Exception) Error() string {
 	return "{JavaException:<TODO>}"
 }
 

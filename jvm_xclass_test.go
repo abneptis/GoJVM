@@ -1,12 +1,12 @@
 package gojvm
 
 /* Tests various external classes pre-disposed to have certain.. 'issues'
-*/
+ */
 import (
 	"testing"
 )
 
-var TrivialClass	=	"cc/qwe/gojvm/Trivial"
+var TrivialClass = "cc/qwe/gojvm/Trivial"
 /* Provides a variety of constructors, and one niladic getConstructorUsed;
 
 Verifies:
@@ -15,9 +15,9 @@ Verifies:
 	Marshalling (int,int64,string,{})
 */
 
-var PathosClass		=	"cc/qwe/gojvm/Pathos"
+var PathosClass = "cc/qwe/gojvm/Pathos"
 /* Throws an exception on construction;
-	Verifies, exception on obj.New()
+Verifies, exception on obj.New()
 */
 
 /* Doesn't exist
@@ -25,11 +25,10 @@ var PathosClass		=	"cc/qwe/gojvm/Pathos"
 Verifies:
 	Exception for missing class	
 */
-var MissingClass		=	"cc/qwe/gojvm/MissingClass"
-
+var MissingClass = "cc/qwe/gojvm/MissingClass"
 
 type trivialClassTest struct {
-	ConstArgs	[]interface{}
+	ConstArgs []interface{}
 }
 
 var trivialClassTests = []trivialClassTest{
@@ -39,9 +38,9 @@ var trivialClassTests = []trivialClassTest{
 	trivialClassTest{[]interface{}{int64(32)}},
 }
 
-func TestJVMTrivialClass( t *testing.T){
+func TestJVMTrivialClass(t *testing.T) {
 	ctx := setupJVM(t)
-	for i, test := range(trivialClassTests){
+	for i, test := range trivialClassTests {
 		form, err := formFor(ctx.Env, BasicType(JavaVoidKind), test.ConstArgs...)
 		fatalIf(t, err != nil, "[%d] Error generating formFor: %v", i, err)
 		fatalIf(t, form == "", "Got nil form")
@@ -54,18 +53,18 @@ func TestJVMTrivialClass( t *testing.T){
 		cn, err := klass.ClassName()
 		fatalIf(t, err != nil, "Pathos name threw an error: %v", err)
 		fatalIf(t, cn.AsPath() != TrivialClass, "Returned wrong name: (exp %q, got %q)", TrivialClass, cn)
-		
+
 	}
 }
 
-func TestJVMPathosClass( t *testing.T){
+func TestJVMPathosClass(t *testing.T) {
 	ctx := setupJVM(t)
 	klass, err := ctx.Env.NewInstanceStr(PathosClass)
 	fatalIf(t, klass != nil, "Pathos should throw an exception (be nil), but got %v", klass)
 	fatalIf(t, err == nil, "Pathos didn't throw an exception")
 }
 
-func TestJVMMissingClass( t *testing.T){
+func TestJVMMissingClass(t *testing.T) {
 	ctx := setupJVM(t)
 	klass, err := ctx.Env.NewInstanceStr(MissingClass)
 	fatalIf(t, klass != nil, "Missing should throw an exception (be nil), but got %v", klass)
