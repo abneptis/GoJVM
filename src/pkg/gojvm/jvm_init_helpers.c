@@ -20,9 +20,15 @@ int addStringArgument(JavaVMInitArgs *args, const char *string){
 
 
 
-jint	newJVMContext(JavaVM **jvm, void **env, JavaVMInitArgs *args){
+jint	newJVMContext(JavaVM **jvm, void *env, JavaVMInitArgs *args){
 	jint out = JNI_CreateJavaVM(jvm, (void **)env, args);
 	return out;
 }
 
+jint	vmAttachCurrentThread(JavaVM *jvm, void *env, void *args){
+	return (*jvm)->AttachCurrentThread(jvm, env, args);
+}
 
+jint vmDetachCurrentThread(JavaVM *jvm){
+	return (*jvm)->DetachCurrentThread(jvm);
+}

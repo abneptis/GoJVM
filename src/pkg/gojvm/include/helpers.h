@@ -72,7 +72,13 @@ void			envReleaseByteArrayElements(JNIEnv *, jobject, jbyte *, jint);
 
 // internal helpers
 int		addStringArgument(JavaVMInitArgs *args, const char *string);
-jint	newJVMContext(JavaVM **, void **, JavaVMInitArgs *);
+// vm Calls
+// env is actually a void **, but we allow void to make CGo easier
+// cleaner solutions welcome! :)
+jint	newJVMContext(JavaVM **, void *, JavaVMInitArgs *);
+jint  vmAttachCurrentThread(JavaVM *jvm, void *env, void *args);
+jint 	vmDetachCurrentThread(JavaVM *jvm);
+
 
 
 

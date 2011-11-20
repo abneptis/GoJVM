@@ -12,6 +12,13 @@ type Context struct {
 	Env     *environment.Environment
 }
 
+func (self *Context)AttachCurrentThread()(env *environment.Environment, err error){
+	env = environment.NewEnvironment()
+	//print ("Allocated environment for thread\t", env.Ptr(),"\n")
+	err = JVMError(C.vmAttachCurrentThread(self.jvm, env.Ptr(), nil))
+	return
+}
+
 func newContext() (ctx *Context) {
 	ctx = &Context{}
 	ctx.Env = environment.NewEnvironment()
@@ -23,7 +30,7 @@ func newContext() (ctx *Context) {
 func initializeContext(args *C.JavaVMInitArgs) (ctx *Context, err error) {
 	ctx = newContext()
 	envPtr := ctx.Env.Ptr()
-	err = JVMError(C.newJVMContext(&ctx.jvm, &envPtr, args))
+	err = JVMError(C.newJVMContext(&ctx.jvm, envPtr, args))
 	return
 }
 

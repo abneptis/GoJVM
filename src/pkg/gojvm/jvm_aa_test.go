@@ -8,6 +8,7 @@ import (
 	"gojvm/environment"
 	"testing"
 	"flag"
+	"sync"
 )
 
 func fatalIf(t *testing.T, tv bool, msg string, args ...interface{}) {
@@ -15,6 +16,15 @@ func fatalIf(t *testing.T, tv bool, msg string, args ...interface{}) {
 		t.Fatalf(msg, args...)
 	}
 }
+
+var SystemClass = "java/lang/System"
+
+func systemClass(env *environment.Environment, t *testing.T) (c *environment.Class) {
+	c, err := env.GetClassStr(SystemClass)
+	fatalIf(t, err != nil, "Error loading system class: %v", err)
+	return
+}
+
 
 var _Ctx *Context
 var squelchExceptions bool /* = false */
@@ -41,9 +51,17 @@ func defMute(env *environment.Environment)(func()){
 
 
 
-func setupJVM(t *testing.T) *Context {
+var startLock = &sync.Mutex{}
+func setupJVM(t *testing.T) (env *environment.Environment){
+	startLock.Lock()
+	defer startLock.Unlock()
 	if _Ctx != nil {
-		return _Ctx
+		var err error
+		env, err = _Ctx.AttachCurrentThread()
+		if err != nil {
+			t.Fatalf("Couldn't attach thread: %v", err)
+		}
+		return
 	}
 	t.Logf("Testing -- using classpath [../../../java/,%s", DefaultJREPath)
 	var err error
@@ -54,7 +72,7 @@ func setupJVM(t *testing.T) *Context {
 	// that causes them to throw, and want readable tests, this is the line
 	// to uncomment.
 	//_Ctx.env.Mute(true)
-	return _Ctx
+	return _Ctx.Env
 }
 
 // so the timing of other tests/bench's isn't thrown.

@@ -22,6 +22,7 @@ const (
 	
 	TODO: Handle references on other items (nominally) correctly.
 
+	
 */
 type Environment struct {
 	env             *C.JNIEnv
@@ -35,7 +36,7 @@ type Environment struct {
 // Returns the underlying JNIEnv pointer.
 // (In practice you should not need this <g>)
 func (self *Environment) Ptr()(unsafe.Pointer){
-	return unsafe.Pointer(self.env)
+	return unsafe.Pointer(&self.env)
 }
 
 func (self *Environment) getObjectMethod(obj *Object, static bool, mname string, rType types.Typed, params ...interface{}) (meth *Method, args argList, objList []*Object, err error) {
