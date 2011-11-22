@@ -7,28 +7,36 @@ package gojvm
 //#include "helpers.h"
 import "C"
 import (
-	"errors"
 	"unsafe"
 )
 
-func DefaultJVMArgs(ver int) (args *C.JavaVMInitArgs, err error) {
-	if ver == 0 {
-		ver = DEFAULT_JVM_VERSION
+
+
+type callbacks struct {
+	calls map[int]interface{}
+	next int
+}
+
+var cCallbacks = callbacks{map[int]interface{}{}, 0}
+
+func findCCallback(p int) (i interface{}) {
+	if v, ok := cCallbacks.calls[p]; ok {
+		i = v
 	}
-	args = new(C.JavaVMInitArgs)
-	//print("Default args\t", ver,"\n")
-	args.version = C.jint(ver)
-	ok := C.JNI_GetDefaultJavaVMInitArgs(unsafe.Pointer(args))
-	err = JVMError(ok)
 	return
 }
 
-func AddStringArg(args *C.JavaVMInitArgs, s string) (err error) {
-	cstr := C.CString(s)
-	defer C.free(unsafe.Pointer(cstr))
-	ok := C.addStringArgument(args, cstr)
-	if ok != 0 {
-		err = errors.New("addStringArg failed")
-	}
+func addGoCallback(fptr interface{})(id int){
+	id = cCallbacks.next
+	cCallbacks.next += 1
+	cCallbacks.calls[id] = fptr
 	return
+}
+
+//export callCCallback
+func callCCallback(eptr unsafe.Pointer, ptr unsafe.Pointer, id int){
+	cb := findCCallback(id)
+	if cb != nil {
+		print("Callback known")
+	}
 }

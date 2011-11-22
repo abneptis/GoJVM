@@ -11,7 +11,6 @@ CGOFILES=\
 	consts.c.go\
 	jvm_init_args.c.go\
 	jvm_helpers.c.go\
-	context.c.go\
 
 CGO_OFILES=\
 	jvm_init_helpers.o\
@@ -28,6 +27,7 @@ TESTING_JAVA=\
 	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Cleaner.class\
 	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Pathos.class\
 	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Trivial.class\
+	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Native.class\
 
 DIST_JAVA=\
 	$(JAVA_BASE)/org/golang/ext/gojvm/Invokable.class\

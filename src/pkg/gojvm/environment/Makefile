@@ -12,17 +12,21 @@ JAVA_BASE=../../../java/
 CGOFILES=\
 	arglist.c.go\
 	environ.c.go\
+	globals.c.go\
 	object.c.go\
 	class.c.go\
+	jvm.c.go\
 	method_sig_helpers.c.go\
 
 CGO_OFILES=\
   jvm_env_helpers.o\
+  jvm_jvm_helpers.o\
   jvm_value_helpers.o\
 
 
 GOFILES=\
-	method_signatures.go
+	method_signatures.go\
+	callback_descriptor.go\
 
 CLEANFILES+=\
 

@@ -17,21 +17,17 @@ func TypeOf(env *Environment, v interface{}) (k types.Typed, err error) {
 	}
 	switch vt := v.(type) {
 	case C.jstring:
-		return types.Class{"java/lang/String"}, nil
+		return types.Class{types.JavaLangString}, nil
 	case types.Typed:
 		return vt, nil
 	case *Object:
-		var klass *Class
-		var name types.ClassName
-		klass, err = vt.ObjectClass()
-		if err == nil {
-			name, err = klass.Name()
-		}
-		if err == nil {
-			k = types.Class{name.AsPath()}
-		}
-		return
+		return types.Class{types.JavaLangObject}, nil
 	}
+	k, err = reflectedType(env, v)
+	return
+}
+
+func reflectedType(env *Environment, v interface{})(k types.Typed, err error){
 	vtype := reflect.TypeOf(v)
 	vkind := vtype.Kind()
 	switch vkind {
@@ -54,16 +50,16 @@ func TypeOf(env *Environment, v interface{}) (k types.Typed, err error) {
 	case reflect.Float64:
 		k = types.Basic(types.DoubleKind)
 	case reflect.Struct:
-		k = types.Class{"golang/" + vkind.String()}
+		k = types.Class{[]string{"golang",vkind.String()}}
 	case reflect.String:
-		k = types.Class{"java/lang/String"}
+		k = types.Class{types.JavaLangString}
 	case reflect.Slice, reflect.Array:
 		sltype := vtype.Elem()
 		switch sltype.Kind() {
 		case reflect.Uint8:
 			k = types.ArrayType{types.Basic(types.ByteKind)}
 		case reflect.String:
-			k = types.ArrayType{types.Class{"java/lang/String"}}
+			k = types.ArrayType{types.Class{types.JavaLangString}}
 		default:
 			err = errors.New("Unhandled slice type " + sltype.String())
 		}
@@ -75,3 +71,57 @@ func TypeOf(env *Environment, v interface{}) (k types.Typed, err error) {
 	}
 	return
 }
+
+type errInterface interface{
+	Error()(string)
+}
+
+func ReflectedSignature(ctx *Environment, f interface{})(sig types.MethodSignature, err error){
+	sig.Return = types.Basic(types.UnspecKind)
+	
+	ftype :=  reflect.TypeOf(f)
+	sig.Params = make([]types.Typed, 0)
+	if ftype.Kind() != reflect.Func {
+		err = errors.New("ReflectedSignature: f is not a function")
+	}
+	if err == nil && ftype.NumIn() < 2 {
+		err = errors.New("ReflectedSignature: f is not a callback (insufficient args)")
+	}
+	if err == nil &&  ftype.NumOut() > 1 {
+		err = errors.New("ReflectedSignature: f is not a callback (too many returns)")
+	}
+	if err == nil && ftype.In(0) != reflect.TypeOf(&Environment{}) {
+		err = errors.New("bad first-arg Type: must be *Environment")
+	}
+	if err == nil && ftype.In(1) != reflect.TypeOf(&Object{}) {
+		err = errors.New("bad second-arg Type: must be *Object")
+	}
+	if err != nil { return }
+	for i := 2; i < ftype.NumIn(); i++ {
+		var k types.Typed
+		if ftype.In(i).Kind() == reflect.Ptr {
+			if ftype.In(i) == reflect.TypeOf(&Object{}){
+				k = types.Class{types.JavaLangObject}
+			} else {
+				itype := ftype.In(i).Elem()
+				pobj := reflect.New(itype).Interface()
+				k, err = TypeOf(ctx, pobj)
+			}
+		} else {
+			k, err = TypeOf(ctx, reflect.New(ftype.In(i)).Interface())
+		}
+		if err != nil { break }
+		sig.Params = append(sig.Params, k)
+	}
+	if ftype.NumOut() == 1 {
+		var k types.Typed
+		k, err = reflectedType(ctx, reflect.New(ftype.Out(0)).Interface())
+		if err == nil {
+			sig.Return = k
+		}
+	} else {
+		sig.Return = types.Basic(types.VoidKind)
+	}
+	return	
+}
+

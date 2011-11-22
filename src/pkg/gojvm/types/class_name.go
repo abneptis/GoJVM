@@ -7,6 +7,10 @@ import (
 /* A unified representation (with compare) of both foo.bar and foo/bar class names */
 type ClassName []string
 
+var JavaLangString	=	ClassName{"java","lang","String"}
+var JavaLangObject	=	ClassName{"java","lang","Object"}
+var JavaLangThrowable	=	ClassName{"java","lang","Throwable"}
+
 /*
 	Parse a string by splitting on '.' and '/';  $Refs are left intact;
 	returns a new ClassName instance

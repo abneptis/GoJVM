@@ -2,6 +2,8 @@ package environment
 
 import (
 	"gojvm/types"
+//	"reflect"
+//	"log"
 )
 
 /* 
@@ -18,7 +20,7 @@ func FormFor(ctx *Environment, ret types.Typed, params ...interface{}) (s string
 func formFor(ctx *Environment, ret types.Typed, params ...interface{}) (s string, err error) {
 	s, err = ParameterString(ctx, params...)
 	if err == nil {
-		s = s + ret.String()
+		s = s + ret.TypeString()
 	}
 	return
 }
@@ -56,3 +58,4 @@ func ParameterString(ctx *Environment, params ...interface{}) (s string, err err
 	}
 	return
 }
+

@@ -4,7 +4,7 @@ package types
 // A 'Typed' contains information for method signatures
 type Typed interface {
 	Kind() Kind
-	String() string
+	TypeString() string
 }
 
 
@@ -26,30 +26,31 @@ the resultant string is () quoted.
 func (self MethodSignature) ParameterString() string {
 	plist := ""
 	for _, parm := range self.Params {
-		plist += parm.String()
+		plist += parm.TypeString()
 	}
 	return "(" + plist + ")"
 }
 
 // Returns the Java method-signature as a string.
 func (self MethodSignature) String() string {
-	return self.ParameterString() + self.Return.String()
+	return self.ParameterString() + self.Return.TypeString()
 }
 
 
 // a 'Basic' is a single 'primative' type
 type Basic Kind
 
-func (self Basic) String() string { return string(self) }
+func (self Basic) TypeString() string { return self.Kind().TypeString() }
 func (self Basic) Kind() Kind  { return Kind(self) }
 
 // a 'Class' is a Java Class name type  a la "Lclass/path/name;"
 type Class struct {
-	Klass string
+	Klass ClassName
 }
 
-func (self Class) String() string { return "L" + self.Klass + ";" }
+func (self Class) TypeString() string { return "L" + self.Klass.AsPath() + ";" }
 func (self Class) Kind() Kind  { return ClassKind }
+func (self Class) ClassName() ClassName  { return self.Klass }
 
 // Java arrays consist of a single type (though the type itself could be
 // the generic 'Object' class
@@ -57,12 +58,16 @@ type ArrayType struct {
 	Underlying Typed
 }
 
-func (self ArrayType) String() string { return "[" + self.Underlying.String() }
+func (self ArrayType) TypeString() string { return "[" + self.Underlying.TypeString() }
 func (self ArrayType) Kind() Kind  { return ArrayKind }
 
 type Kind int
+func (self Kind)TypeString()(string) {
+	return string(self)
+}
 
 const (
+	UnspecKind	Kind = '_'
 	BoolKind   Kind = 'Z'
 	ByteKind   Kind = 'B'
 	CharKind   Kind = 'C'

@@ -1,0 +1,14 @@
+The 'newest' part is the callbacks (Java native -> JNI -> CGO -> Go),
+so please use care when using
+
+
+Bugs/ TODO
+=========
+	- Bad callback function heders can wedge the reflection engine.
+	- Callbacks are not all throwing/catching exceptions when they should
+	- Callbacks are limited to the number of "GenericX" functions defined
+		in the headers and C files (and the matching dispatcher function).
+		Ways to make this less hacky are WELCOME!
+	- Probably not releasing all references when we should
+	- Custom callback types (e.g., children of java/lang/Object) 
+		are not yet supported (with the exception of String)

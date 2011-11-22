@@ -5,12 +5,11 @@ package environment
 //#include "helpers.h"
 import "C"
 import (
-	"unsafe"
 	"gojvm/types"
+	"log"
 )
+
 type Object struct {
-	env    *Environment
-	_klass *Class
 	object C.jobject
 }
 
@@ -19,95 +18,66 @@ type Object struct {
 // returns a new object value with specified parameters
 // NB: refs are NOT adjusted directly by this call! Use it as a casting/construction-helper,
 // not a Clone()
-func newObject(env *Environment, klass *Class, obj C.jobject) *Object {
-	return &Object{env, klass, obj}
+func newObject(obj C.jobject) *Object {
+	return &Object{obj}
 }
 
 /* 
-	Returns the Class() associated with the object;
-	If this was known at call, that value will be used,
-	else it will be resolved through the environment into a 
-	class type.
+	Returns the Class() associated with the object
 */
-func (self *Object) ObjectClass() (c *Class, err error) {
-	if self._klass == nil {
-		self._klass, err = self.env.GetObjectClass(self)
-	}
-	if err == nil {
-		c = self._klass
-	}
-	return
+func (self *Object) ObjectClass(env *Environment) (c *Class, err error) {
+	return env.GetObjectClass(self)
 }
 
 /*
 	Returns the (potentially cached) name of the ObjectClass of the
 	named object.
 */
-func (self *Object) ClassName() (name types.ClassName, err error) {
-	c, err := self.ObjectClass()
+func (self *Object) ClassName(env *Environment) (name types.ClassName, err error) {
+	var c *Class
+	c, err = self.ObjectClass(env)
 	if err == nil {
-		name, err = c.Name()
-	}
-	return
-}
-
-func (self Object) JavaType () int { return JAVAObject }
-
-// Calls the named void-method on the object instance
-func (self *Object) CallVoid(static bool, mname string, params ...interface{}) (err error) {
-	meth, args, localStack, err := self.env.getObjectMethod(self, static, mname, types.Basic(types.VoidKind), params...)
-	if err != nil { return	}
-	defer blowStack(self.env, localStack)
-	if static {
-		C.envCallStaticVoidMethodA(self.env.env, self.object, meth.method, args.Ptr())
+		defer env.DeleteLocalClassRef(c)
+		name, err = c.GetName(env)
 	} else {
-		C.envCallVoidMethodA(self.env.env, self.object, meth.method, args.Ptr())
-	}
-	if self.env.ExceptionCheck() {
-		err = self.env.ExceptionOccurred()
+		log.Printf("Couldn't get object class!")
 	}
 	return
 }
 
-// Calls the named int-method on the object instance
-func (self *Object) CallInt(static bool, mname string, params ...interface{}) (i int, err error) {
-	meth, args, localStack, err := self.env.getObjectMethod(self, static, mname, types.Basic(types.IntKind), params...)
-	if err != nil { return }
-	defer blowStack(self.env, localStack)
-	var ji C.jint
-	if static {
-		ji = C.envCallStaticIntMethodA(self.env.env, self.object, meth.method, args.Ptr())
-	} else {
-		ji = C.envCallIntMethodA(self.env.env, self.object, meth.method, args.Ptr())
-	}
-	if self.env.ExceptionCheck() {
-		err = self.env.ExceptionOccurred()
-	}
-	if err == nil {
-		i = int(ji)
-	}
-	return
+
+func (self *Object) CallVoid(env *Environment, static bool, mname string, params ...interface{}) (err error) {
+	return env.CallObjectVoid(self, static, mname, params...)
 }
+
+func (self *Object) CallInt(env *Environment, static bool, mname string, params ...interface{}) (i int, err error) {
+	return env.CallObjectInt(self, static, mname, params...)
+}
+
+func (self *Object) CallLong(env *Environment, static bool, mname string, params ...interface{}) (i int64, err error) {
+	return env.CallObjectLong(self, static, mname, params...)
+}
+
+func (self *Object) CallBool(env *Environment, static bool, mname string, params ...interface{}) (i bool, err error) {
+	return env.CallObjectBool(self, static, mname, params...)
+}
+
+func (self *Object) CallFloat(env *Environment, static bool, mname string, params ...interface{}) (i float32, err error) {
+	return env.CallObjectFloat(self, static, mname, params...)
+}
+
+func (self *Object) CallShort(env *Environment, static bool, mname string, params ...interface{}) (i int16, err error) {
+	return env.CallObjectShort(self, static, mname, params...)
+}
+
+func (self *Object) CallDouble(env *Environment, static bool, mname string, params ...interface{}) (i float64, err error) {
+	return env.CallObjectDouble(self, static, mname, params...)
+}
+
 
 // Calls the named Object-method on the object instance
-func (self *Object) CallObj(static bool, mname string, rval types.Typed, params ...interface{}) (vObj *Object, err error) {
-	meth, alp, localStack, err := self.env.getObjectMethod(self, static, mname, rval, params...)
-	if err != nil { return	}
-	defer blowStack(self.env, localStack)
-	var oval C.jobject
-	if static {
-		oval = C.envCallStaticObjectMethodA(self.env.env, self.object, meth.method, alp.Ptr())
-	} else {
-		oval = C.envCallObjectMethodA(self.env.env, self.object, meth.method, alp.Ptr())
-	}
-	if oval == nil {
-		// is this always the case? or should we use Exception check?		
-		err = self.env.ExceptionOccurred()
-	}
-	if err == nil {
-		vObj = newObject(self.env, nil, oval)
-	}
-	return
+func (self *Object) CallObj(env *Environment, static bool, mname string, rval types.Typed, params ...interface{}) (vObj *Object, err error) {
+	return env.CallObjectObj(self, static, mname, rval, params...)
 }
 
 /* 
@@ -115,38 +85,6 @@ func (self *Object) CallObj(static bool, mname string, rval types.Typed, params 
 
 	A null string returned with no Exception can be differentiated via the wasNull return value.
 */
-func (self *Object) CallString(static bool, mname string, params ...interface{}) (str string, wasNull bool, err error) {
-	strobj, err := self.CallObj(static, mname, types.Class{"java/lang/String"}, params...)
-	if err != nil {
-		return
-	}
-	if strobj == nil {
-		wasNull = true
-		if self.env.ExceptionCheck() {
-			err = self.env.ExceptionOccurred()
-		} // if no Exception, they returned a null string
-		return
-	}
-	defer self.env.DeleteLocalRef(strobj)
-
-	bytesObj, err := strobj.CallObj(false, "getBytes", types.ArrayType{types.Basic(types.ByteKind)}, self.env.utf8())
-	if err != nil {
-		return
-	}
-	if bytesObj == nil {
-		return // they returned an empty string
-	}
-	defer self.env.DeleteLocalRef(bytesObj)
-	//print("getting array length\n")
-	alen := C.envGetArrayLength(self.env.env, bytesObj.object)
-	//print("got array length\t",alen, "\n")
-	_false := C.jboolean(C.JNI_FALSE)
-	//print("getting bytes...\n")
-	ptr := C.envGetByteArrayElements(self.env.env, bytesObj.object, &_false)
-	//print("setting deferral...\n")
-	defer C.envReleaseByteArrayElements(self.env.env, bytesObj.object, ptr, 0)
-	//print("going ", alen, " bytes...\n")
-	str = string(C.GoBytes(unsafe.Pointer(ptr), C.int(alen)))
-	//print("str == ", str, "\n")
-	return
+func (self *Object) CallString(env *Environment, static bool, mname string, params ...interface{}) (str string, wasNull bool, err error) {
+	return env.CallObjectString(self, static, mname, params...)
 }

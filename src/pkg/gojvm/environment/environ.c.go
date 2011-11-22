@@ -15,6 +15,7 @@ const (
 	JAVAObject
 )
 
+
 /* 
 
 	An environment consists of a pointer to a JNI environment
@@ -26,6 +27,7 @@ const (
 */
 type Environment struct {
 	env             *C.JNIEnv
+	jvm				*JVM
 	classes         map[string]*Class
 	quietExceptions bool
 	// various 'consts'
@@ -47,6 +49,23 @@ func (self *Environment) getObjectMethod(obj *Object, static bool, mname string,
 	args, objList, err = newArgList(self, params...)
 	return
 }
+
+func (self *Environment)getMethod(t interface{}, static bool, mname string, rType types.Typed, params ...interface{}) (jval C.jvalue, meth *Method, args argList, objList []*Object, err error){
+	switch v := t.(type) {
+		case *Object: 
+			//print("getObjMethod\t",mname, "\t",rType.TypeString(),"\n")
+			jval = C.objValue(v.object)
+			meth, args, objList, err = 	self.getObjectMethod(v, static, mname, rType, params...)
+		case *Class: 	
+//			print("getClassMethod\t",mname, "\t",rType.TypeString(),"\n")
+			jval = C.objValue(v.class)
+			meth, args, objList, err	= 	self.getClassMethod(v, static, mname, rType, params...)
+		default:
+			panic("getMethod called on unknown type")
+	}
+	return
+}
+
 
 // used in testing;  a 'squelch' helper
 // such that:
@@ -92,15 +111,17 @@ func (self *Environment) utf8() C.jstring {
 	if self._UTF8 == nil {
 		cs := C.CString("UTF8")
 		defer C.free(unsafe.Pointer(cs))
-		self._UTF8 = C.envNewStringUTF(self.env, cs)
+		tf8  := C.envNewStringUTF(self.env, cs)
+		self._UTF8 = C.jstring(C.envNewGlobalRef(self.env, tf8))
 	}
 	return self._UTF8
 }
 
-func NewEnvironment() *Environment {
+func NewEnvironment(jvm *JVM) *Environment {
 	return &Environment{
 		env:     new(C.JNIEnv),
 		classes: map[string]*Class{},
+		jvm:	jvm,
 	}
 }
 
@@ -127,15 +148,7 @@ func (self *Environment) findCachedClass(klass types.ClassName) (c *Class, err e
 	representation of 's'.  Mostly a helper for passing strings into Java.
 */
 func (self *Environment) NewStringObject(s string) (obj *Object, err error) {
-	if err == nil {
-		obj, err = self.NewInstanceStr("java/lang/String", []byte(s), self.utf8())
-	}
-	/*
-		The naieve approach doesn't work w/ complex or bad UTF8
-		    obj = &Object{
-		    	object: C.jobject(C.envNewStringUTF(self.env,cs)),
-		    }
-	*/
+	obj, err = self.NewInstanceStr("java/lang/String", []byte(s), self.utf8())
 	return
 }
 
@@ -151,7 +164,7 @@ func (self *Environment) newObjectArray(sz int, klass *Class, init C.jobject) (o
 		err = self.ExceptionOccurred()
 	}
 	if err == nil {
-		o = newObject(self, klass, C.jobject(ja))
+		o = newObject(C.jobject(ja))
 	}
 	return
 }
@@ -168,7 +181,7 @@ func (self *Environment) newByteObject(bts []byte) (o *Object, err error) {
 		C.envSetByteArrayRegion(self.env, ja, 0, C.jint(len(bptr)), unsafe.Pointer(&bptr[0]))
 	}
 	if err == nil {
-		o = newObject(self, nil, C.jobject(ja))
+		o = newObject(C.jobject(ja))
 	}
 	return
 }
@@ -192,11 +205,10 @@ func (self *Environment) NewInstance(c *Class, params ...interface{}) (o *Object
 	//	meth, alp, err := self.getObjectMethod(newObject(self, c, C.jobject( c.class)), "<init>", BasicType(JavaVoidKind), params...)
 	if err != nil { return }
 	defer blowStack(self, localStack)
-
 	obj := C.envNewObjectA(self.env, c.class, meth.method, alp.Ptr())
 	if obj != nil {
 		obj = C.envNewGlobalRef(self.env, obj)
-		o = newObject(self, c, obj)
+		o = newObject(obj)
 	} else {
 		err = self.ExceptionOccurred()
 	}
@@ -220,12 +232,13 @@ func (self *Environment) GetClass(klass types.ClassName) (c *Class, err error) {
 	// print("envFindClass ", klass,"\n")
 	kl := C.envFindClass(self.env, s)
 	if kl == nil {
+		//print("GetClass missed ", klass.AsPath(), "\n\n")
 		err = self.ExceptionOccurred()
 	} else {
 		err = nil // clear the cache error
-		// print("found ", klass,"\n")
+		//print("found ", klass,"\n")
 		kl = C.jclass(C.envNewGlobalRef(self.env, kl))
-		c = newClass(self, klass, kl)
+		c = newClass(kl)
 		self.classes[klass.AsPath()] = c
 	}
 	return
@@ -242,17 +255,11 @@ func (self *Environment) GetObjectClass(o *Object) (c *Class, err error) {
 	if kl == nil {
 		err = self.ExceptionOccurred()
 	} else {
-		/*
-			TODO: nil's probably not the best, we could (maybe?) keep a global ref to 'java/lang/Class',
-			or doing a recursive call (icky error handling tho).
-			
-			For now, we nil it and users will end up with a re;eated call
-			to GOC if they need the classes class for some operation....
-		*/
-		c = self.NewLocalClassRef(newClass(self, nil, kl))
+		c = newClass(kl)
 	}
 	return
 }
+
 
 func (self *Environment) _objMethod(obj *Object, name string, jt types.Typed, params ...interface{}) (meth *Method, err error) {
 	class, err := self.GetObjectClass(obj)
@@ -282,16 +289,13 @@ func (self *Environment) _objMethod(obj *Object, name string, jt types.Typed, pa
 
 func (self *Environment) _classMethod(class *Class, name string, jt types.Typed, params ...interface{}) (meth *Method, err error) {
 	form, err := formFor(self, jt, params...)
-	if err != nil {
-		return
-	}
+	if err != nil {  return }
 	cmethod := C.CString(name)
 	defer C.free(unsafe.Pointer(cmethod))
 	cform := C.CString(form)
 	defer C.free(unsafe.Pointer(cform))
 	//cname, err := class.Name()
 	//if err != nil { return }
-	//print("Looking for ", name, "\t", form, "\t in ", cname.AsPath(), "\n")
 	m := C.envGetMethodID(self.env, class.class, cmethod, cform)
 	if m == nil {
 		err = self.ExceptionOccurred()
@@ -339,6 +343,8 @@ func (self *Exception) Error() string {
 func (self *Environment) ExceptionOccurred() (ex *Exception) {
 	throwable := C.envExceptionOccurred(self.env)
 	if throwable != nil {
+		// TODO: We'll need to do a global reference to this
+		// if it outlasts a callback...
 		ex = &Exception{throwable}
 		if !self.quietExceptions {
 			C.envExceptionDescribe(self.env)
@@ -356,7 +362,7 @@ func (self *Environment) ExceptionCheck() bool {
 
 // Syntactic sugar around &Class{C.jclass(LocalRef(&Object{C.jobject(class.class)}))}
 func (self *Environment) NewLocalClassRef(c *Class) *Class {
-	return newClass(self, c._klass, C.jclass(C.envNewLocalRef(self.env, c.class)))
+	return newClass(C.jclass(C.envNewLocalRef(self.env, c.class)))
 }
 
 // Syntactic sugar around LocalUnref(&Object{C.jobject(class.class)})
@@ -366,7 +372,7 @@ func (self *Environment) DeleteLocalClassRef(c *Class) {
 
 // Adds a 'local' ref to the JVM for Object, and returns an object that is contains reference
 func (self *Environment) NewLocalRef(o *Object) *Object {
-	return newObject(self, o._klass, C.envNewLocalRef(self.env, o.object))
+	return newObject(C.envNewLocalRef(self.env, o.object))
 }
 
 // Release a local reference (returned from LocalRef) back to the JVM
@@ -379,5 +385,276 @@ func (self *Environment) DeleteLocalRef(o *Object) {
 // I'm going to lose it somewhere in my stack',
 // and as such should be use sparingly
 func (self *Environment) NewGlobalRef(o *Object) *Object {
-	return newObject(self, o._klass, C.envNewGlobalRef(self.env, o.object))
+	return newObject(C.envNewGlobalRef(self.env, o.object))
 }
+
+func (self *Environment)UnregisterNatives(c *Class)(err error){
+	if 0 != C.envUnregisterNatives(self.env, c.class) {
+		err = self.ExceptionOccurred()
+	}
+	return
+}
+
+func (self *Environment)RegisterNative(c *Class, name string, fptr interface{})(err error){
+//	env.RegisterNative(klass, "NativePing", func(E *environment.Environment, O *environment.Object)(Error){
+//		nativePings += 1
+//	})
+	
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	id, sig, err := self.jvm.addNative(self, fptr)
+	csig  := C.CString(sig.String())
+	defer C.free(unsafe.Pointer(csig))
+	if err != nil { return }
+	
+	if 0 != C.envRegisterNative(self.env, c.class, cname, csig,  C.int(id)){
+		err = self.ExceptionOccurred()
+	}
+	return
+}
+
+/* CallObject methods */
+func asBool(jb C.jboolean)(bool){
+	if jb == C.JNI_FALSE {
+		return false
+	}
+	return true
+}
+
+func (self *Environment)CallObjectVoid(obj *Object, static bool, name string,  params ...interface{})(err error){
+	return self.callVoid(obj, static, name, params...)
+}
+
+func (self *Environment)CallClassVoid(obj *Class, static bool, name string,  params ...interface{})(err error){
+	return self.callVoid(obj, static, name, params...)
+}
+
+func (self *Environment)CallObjectInt(obj *Object, static bool, name string,  params ...interface{})(v int, err error){
+	return self.callInt(obj, static, name, params...)
+}
+
+func (self *Environment)CallClassInt(obj *Class, static bool, name string,  params ...interface{})(v int, err error){
+	return self.callInt(obj, static, name, params...)
+}
+
+func (self *Environment)CallObjectLong(obj *Object, static bool, name string,  params ...interface{})(v int64, err error){
+	return self.callLong(obj, static, name, params...)
+}
+
+func (self *Environment)CallClassLong(obj *Class, static bool, name string,  params ...interface{})(v int64, err error){
+	return self.callLong(obj, static, name, params...)
+}
+
+func (self *Environment)CallObjectShort(obj *Object, static bool, name string,  params ...interface{})(v int16, err error){
+	return self.callShort(obj, static, name, params...)
+}
+
+func (self *Environment)CallClassShort(obj *Class, static bool, name string,  params ...interface{})(v int16, err error){
+	return self.callShort(obj, static, name, params...)
+}
+
+
+func (self *Environment)CallObjectBool(obj *Object, static bool, name string,  params ...interface{})(v bool, err error){
+	return self.callBool(obj, static, name, params...)
+}
+
+func (self *Environment)CallClassBool(obj *Class, static bool, name string,  params ...interface{})(v bool, err error){
+	return self.callBool(obj, static, name, params...)
+}
+
+func (self *Environment)CallObjectFloat(obj *Object, static bool, name string,  params ...interface{})(v float32, err error){
+	return self.callFloat(obj, static, name, params...)
+}
+
+func (self *Environment)CallClassFloat(obj *Class, static bool, name string,  params ...interface{})(v float32, err error){
+	return self.callFloat(obj, static, name, params...)
+}
+
+func (self *Environment)CallObjectDouble(obj *Object, static bool, name string,  params ...interface{})(v float64, err error){
+	return self.callDouble(obj, static, name, params...)
+}
+
+func (self *Environment)CallClassDouble(obj *Class, static bool, name string,  params ...interface{})(v float64, err error){
+	return self.callDouble(obj, static, name, params...)
+}
+
+func (self *Environment)CallObjectObj(obj *Object, static bool, name string, rtype types.Typed,  params ...interface{})(v *Object, err error){
+	return self.callObj(obj, static, name, rtype, params...)
+}
+
+func (self *Environment)CallClassObj(obj *Class, static bool, name string,  rtype types.Typed, params ...interface{})(v *Object, err error){
+	return self.callObj(obj, static, name, rtype, params...)
+}
+
+
+
+func (self *Environment)CallObjectString(obj *Object, static bool, name string,  params ...interface{})(s string, isNull bool, err error){
+	strObj, err := self.callObj(obj, static, name, types.Class{types.JavaLangString}, params...)
+	if err == nil {
+		defer self.DeleteLocalRef(strObj)
+		return self.ToString(strObj)
+	}
+	return
+}
+
+func (self *Environment)CallClassString(obj *Class, static bool, name string, params ...interface{})(s string, isNull bool, err error){
+	strObj, err := self.callObj(obj, static, name, types.Class{types.JavaLangString}, params...)
+	if err == nil {
+		defer self.DeleteLocalRef(strObj)
+		return self.ToString(strObj)
+	}	
+	return
+}
+
+func (self *Environment)callBool(z interface{}, static bool, name string,  params ...interface{})(b bool, err error){
+	jval, meth, args, localStack, err := self.getMethod(z, static, name, types.Basic(types.BoolKind), params...)
+	if err != nil { return }
+	defer blowStack(self, localStack)
+	var ji C.jboolean
+	if static {
+		ji = C.envCallStaticBoolMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	} else {
+		ji = C.envCallBoolMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	}
+	if self.ExceptionCheck() { err = self.ExceptionOccurred() }
+	if err == nil { 
+		b = asBool(ji)
+	}
+	return
+}
+
+func (self *Environment)callVoid(z interface{}, static bool, name string,  params ...interface{})(err error){
+	jval, meth, args, localStack, err := self.getMethod(z, static, name, types.Basic(types.VoidKind), params...)
+	if err != nil { return }
+	defer blowStack(self, localStack)
+	if static {
+		C.envCallStaticVoidMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	} else {
+		C.envCallVoidMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	}
+	if self.ExceptionCheck() { err = self.ExceptionOccurred() }
+	return
+}
+
+func (self *Environment)callInt(z interface{}, static bool, name string,  params ...interface{})(v int, err error){
+	jval, meth, args, localStack, err := self.getMethod(z, static, name, types.Basic(types.IntKind), params...)
+	if err != nil { return }
+	defer blowStack(self, localStack)
+	var ji C.jint
+	if static {
+		ji = C.envCallStaticIntMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	} else {
+		ji = C.envCallIntMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	}
+	if self.ExceptionCheck() { err = self.ExceptionOccurred() }
+	v = int(ji)
+	return	
+}
+
+func (self *Environment)callDouble(z interface{}, static bool, name string,  params ...interface{})(v float64, err error){
+	jval, meth, args, localStack, err := self.getMethod(z, static, name, types.Basic(types.DoubleKind), params...)
+	if err != nil { return }
+	defer blowStack(self, localStack)
+	var ji C.jdouble
+	if static {
+		ji = C.envCallStaticDoubleMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	} else {
+		ji = C.envCallDoubleMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	}
+	if self.ExceptionCheck() { err = self.ExceptionOccurred() }
+	v = float64(ji)
+	return	
+}
+
+func (self *Environment)callFloat(z interface{}, static bool, name string,  params ...interface{})(v float32, err error){
+	jval, meth, args, localStack, err := self.getMethod(z, static, name, types.Basic(types.FloatKind), params...)
+	if err != nil { return }
+	defer blowStack(self, localStack)
+	var ji C.jfloat
+	if static {
+		ji = C.envCallStaticFloatMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	} else {
+		ji = C.envCallFloatMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	}
+	if self.ExceptionCheck() { err = self.ExceptionOccurred() }
+	v = float32(ji)
+	return	
+}
+
+
+func (self *Environment) callObj(z interface{}, static bool, name string, rval types.Typed, params ...interface{}) (vObj *Object, err error) {
+	jval, meth, args, localStack, err := self.getMethod(z, static, name, rval, params...)
+	if err != nil { return	}
+	defer blowStack(self, localStack)
+	var oval C.jobject
+	if static {
+		oval = C.envCallStaticObjectMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	} else {
+		oval = C.envCallObjectMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	}
+	if oval == nil {
+		err = self.ExceptionOccurred()
+	}
+	if err == nil {
+		vObj = newObject(oval)
+	}
+	return
+}
+
+
+func (self *Environment) callLong(z interface{}, static bool, name string, params ...interface{}) (v int64, err error) {
+	jval, meth, args, localStack, err := self.getMethod(z, static, name,types.Basic(types.LongKind), params...)
+	if err != nil { return	}
+	defer blowStack(self, localStack)
+	var oval C.jlong
+	if static {
+		oval = C.envCallStaticLongMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	} else {
+		oval = C.envCallLongMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	}
+	if self.ExceptionCheck() {
+		err = self.ExceptionOccurred()
+	}
+	if err == nil {
+		v = int64(oval)
+	}
+	return
+}
+
+func (self *Environment) callShort(z interface{}, static bool, name string, params ...interface{}) (v int16, err error) {
+	jval, meth, args, localStack, err := self.getMethod(z, static, name,types.Basic(types.ShortKind), params...)
+	if err != nil { return	}
+	defer blowStack(self, localStack)
+	var oval C.jshort
+	if static {
+		oval = C.envCallStaticShortMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	} else {
+		oval = C.envCallShortMethodA(self.env, C.valObject(jval), meth.method, args.Ptr())
+	}
+	if self.ExceptionCheck() {
+		err = self.ExceptionOccurred()
+	}
+	if err == nil {
+		v = int16(oval)
+	}
+	return
+}
+
+func (self *Environment) ToString(strobj *Object)(str string, isNull bool, err error){
+	var bytesObj *Object 
+	bytesObj, err = self.CallObjectObj(strobj, false, "getBytes", types.ArrayType{types.Basic(types.ByteKind)}, self.utf8())
+	if err == nil && bytesObj == nil {
+		isNull = true
+		return
+	}
+	if err == nil {
+		defer self.DeleteLocalRef(bytesObj)
+		alen := C.envGetArrayLength(self.env, bytesObj.object)
+		_false := C.jboolean(C.JNI_FALSE)
+		ptr := C.envGetByteArrayElements(self.env, bytesObj.object, &_false)
+		defer C.envReleaseByteArrayElements(self.env, bytesObj.object, ptr, 0)
+		str = string(C.GoBytes(unsafe.Pointer(ptr), C.int(alen)))
+	}
+	return
+}
+

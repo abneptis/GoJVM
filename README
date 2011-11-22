@@ -7,6 +7,12 @@ comes to mind).
 	Using GoJVM, a dynamically linked JVM can be loaded, and Java objects and classes can be manipulated,
 allowing Go to 'call into' instantiated classes, and manage portions of logic w/r/t Java.
 
+why-in-gods-name
+================
+	To be honest, I just got frustrated proxying java calls in arbitrary ways to
+a go method, in order to handle a vendor library that only shipped in 
+C++ or Java.  Since go's C++ support is pretty terrible but Java's C support is
+surprisingly good, this is the route I've chosen for gojvm's design.
 
 running
 =======
@@ -18,8 +24,7 @@ system, commands that will load the JVM will need to be prefixed, simliar to:
 
 LD_LIBRARY_PATH=/usr/lib/jvm/default-java/jre/lib/amd64/server/		gotest
 
-	(alternatively, wrapped in a tiny shell script that does same)
-
+	(alternatively, wrapped in a tiny shell script [not included] that does same)
 
 disclaimer
 ==========
@@ -33,30 +38,171 @@ reflection
 ==========
 	Fairly weak right now, but support for basic types & very basic slices are supported
 
+	Go provides no way (to my knowledge) to dynamically create a struct, so magic go is
+impossible w/o a magic intermediate compilation phase.
+
+	Java reflection is fairly strong, but also provides no way of dynamially defining a class
+(without access to a .class compiler);  (TODO: Java includes one IIRC, why not make use of it <g>).
+
+	The implementation is generally naieve about results -- it holds a reference but may not provide
+a trivial way to access its semantics.  Part of this derives from certain JVM limitations, some from
+Go, but basically, generalized reflection is very verbose code (and not idiomatic in either Java or Go),
+so that a caller (or wrapper) will typically have to know more details about the expected underlying 
+structure of an Object than would be gleanable by trivial refletion at run-time.
+
 sizes
 =====
-	We make certain assumptions in reflection: that a go int can be casted to a java int (same for long, etc).
-On my system they seem to prove nominally fine (so far), but tests have not been written that really excercise
-boundary conditions on types.
+	We make certain assumptions in reflection: that a go int can be casted to a
+java int (same for long/int64, etc).  On my system they seem to prove nominally
+fine (so far), but tests have not been written that really excercise boundary
+conditions on types.
 
 strings
 =======
-	Java uses UTF-16, Go uses UTF-8;  When using the CallString and other functions, all references
-and conversions are handled, otherwise the user of the Object is responsible for dereferencing and
-UTF conversions.
+	Java uses UTF-16, Go uses UTF-8;  When using the CallString and other
+functions, all references and conversions are handled, otherwise the 
+user of the Object is responsible for dereferencing and UTF conversions.
 
+	As odd as it seems - strings are one of the worst types for GoJVM, since
+both Java and Go have native UTF string types, but differ in terms of
+default semantics.  A guaranteed low-bit ascii string is trivial, but
+to ensure portability and safety, all explicit string methods are converted by
+either the Go or Java VM (currently the Java VM handles all conversions).
 
+	If the Go side needs only the reference and not the content of the string, 
+it is recommended to use the XXXObj functions rather than the XXXString,
+as no automatic conversion will be made at that time.
 
 tests
 =====
 	Will fail unless you've built (or distributed) the java class-files.
-	A trivial make implementation can be generated via 'gomake java_classes', and requires javac to be on PATH.
+		'make java_classes' should accomplish this on a 'standard' system..
 	[ a patch/how to make 'gotest': depend on this would be appreciated]
 
+	Generally, an x86 style-platform is assumed, and mainline build & testing is done against the Sun JRE (6),
+however the design is from JNI spec and interestingly, the lack of a strong Java heritage makes our 'naive' 
+implementation more robust against non-Java approaches on the JVM.
+	Basic testing of reference handling is done, however as a private/new project, it likely has areas that
+leak like scieves or perform like sludge. As the projects understanding of the JNI (and real-world use) happens,
+it is expected some performance improvements will be gleaned, but it is NOT a goal of gojvm to match native
+go or Java speeds to cross go/Java speeds.
+
+benchmarks
+==========
+	In many of the current benchmarks, we've included a 'reference' go 
+implementation.  To use them as a comparison against the 'JVM interactive' 
+tests is an expressly unfair comparison.  While Java is  'write once, run 
+anywhere that happens to match the semantics and limitations of my test 
+environment', JNI is not.  Java has to do a great deal of work to handle 
+requests of the JNI interface, whereas a strictly Java or Go implementation
+has no such 'border' concerns.
+
+	The results serve as a basis point for general ratios between native and cross
+calls, but do NOT indicate that Go native would be superior to Java native without
+more conclusive measures.
+
+performance suggestions
+=======================
+	As gojvm improves, certain caching properties will improve, making the 
+performance /closer to C calling into JNI/, but it is NOT expected to ever 
+perform better than code that stays in the JVM or Go entirely, since the
+performance of GoJVM depends on coordination from both.
+
+	That's not to say you can't benefit from gojvm, but that the border wall
+is not 'invisible', no matter how much syntactic sugar is on top of it.
+The 'JNI book' says keep your interfaces small, but that is not
+entirely correct -- performing a loop that requires un/de/re/marshalling
+across languages will suffer far more than if one created a stub in the
+source language to do the loop, and pass the results to the other.
+
+	If your goal is to interact with a Java process under your control, 
+in a non performance-critical way - the trivial interfaces will probably
+suffice with some wrapping.
+
+	If your goal is to maximize performance of critical sections across
+a varied language set, be _very_ careful to check your performance metrics.
+
+	For 'serious' performance between go and the JVM, it is recommended
+that you establish a communications channel that is NOT directly through
+the JNI interface (e.g., passing an file-descriptor between Go and Java),
+and using that for communications.  At that point Java and Go are operating
+in independant threads, and /shouldn't/ step on each other.
+
+	Ultimately, you will want proxies on each side that make sense in each
+context, and GoJVM only aims to provide a means and examples of that,
+not 'the final way you will access the JVM from go'.  As (if) the project
+grows, I imagine more general & derivable solutions will be made, but without
+changes to the go or jvm (or use of the compilers from at least one side),
+I do not anticipate ever having a trivial 'obj.DoSomething(withThis)' being
+valid go (without a wrapper)..
+
+jvm notes & observations
+========================
+
+	Trivial types (int, long, etc), are generally converted safely, but
+there are (probably) cases that if the JVM sizes don't match the expected go 
+size that precision could be arbitrarily lost.  I don't know of such a system,
+but if this paragraph scares you, then let me know the 'right' way to handle
+yours.
+
+	jBooleans are stored as bytes, zero being false and all others being true,
+thus a direct (and portable) comparison to C.JNI_TRUE is not correct;  consider
+the case of a JNI method interacting with a (different) JNI method.  If one
+writes true as 0x01, and the other as 0xff, it is likely that using 'TRUE' 
+comparisons  would lead to unexpected failure.
+
+portability
+===========
+
+	If compiled on the host system, the only constraints are mentioned under
+'sizing' (e.g., long=int64, int=int(32), short=int16, etc). 
+
+	If you are shipping product, note that the host must provide an appropriate 
+set of JNI .so/.dll's to link to, and the user will need to provide an 
+LD_LIBRARY_PATH (probably).	Both of which may be host/architecture specific,
+amd should not be hard coded (as they are in the examples...) GoJVM does not 
+(by itself) produce a cross-platform binary, but a compiled GoJVM binary can 
+rely on any arch-appropriate or arch-independant java .class files.
+
+	Callbacks (from Java to Go) use and abuse the C variadic macros.  This
+seems to work fine on Amd64 (and I believe should on i386), but I am
+not convinced this approach is portable.  Do let me know if you test it
+on other architectures.
+
 threading
-====
-	Don't do it on the JVM thread(!?);  Based on JNI documentation, it's probably unsafe to do so without
-a distinct environment pointer, and I've not tried to deal with that yet.
+=========
+	Access to the environment must be on the threads designated *Environment 
+pointer.  If you are uncertain, it is safe to call the contexts 
+'AllocCurrentThread', but an uncertain caller should _NOT_ Dealloc the 
+current thread.
 
+	GoJVM does not specifically track deallocations/dereferences, so an
+unsafe call betwixt will blow up go or the JVM in interesting, but generally
+unpleasant and non-stack-tracey ways.  You are encouraged to use defer
+judiciously. (Dev-tip: If you've wonked the JVM and  ^C and ^\ don't 
+work, ^Z sometimes does;  you MUST reap the process via an  appropaite 
+'kill %' or kill -KILL %' in order to reap them if the JVM is in
+a state that 'requires' this behaviour.
 
+exceptions
+==========
+	Published calls through *Environment (on the appropriate thread) shall
+catch their own exceptions and they shall be returned on err;  The state of
+the JVM on return with exception is /cleared/ of exceptions, however the 
+jthrowable is in the opaque portion of the *Exception object.
 
+	If you use *Environment JVM calls directly, you MUST provide a deferral
+to unref any mess you leave out of the JVM on success/error/exception, 
+or you will leak.
+
+	For as good as the 'JNI book' is, there is some vagueness about the safety
+of certain Exception calls in non-exceptional states.  Still, all exceptional
+functions are considered safe to call during an exception, so I expect the worst
+case is that you'd possibly generate an exception through misuse, rather than
+wedge the JVM.
+
+Code, Copyright & License
+=========================
+	All reasonably holdable copyrights are held (c) 2011, James D. Nurmi, Abneptis LLC.
+
+	Current code is licensed to you under the terms of the  GPLv3+A.

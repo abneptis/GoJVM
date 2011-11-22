@@ -32,3 +32,5 @@ jint	vmAttachCurrentThread(JavaVM *jvm, void *env, void *args){
 jint vmDetachCurrentThread(JavaVM *jvm){
 	return (*jvm)->DetachCurrentThread(jvm);
 }
+
+

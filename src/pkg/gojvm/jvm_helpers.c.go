@@ -5,7 +5,10 @@ package gojvm
 //#include <stdlib.h>
 //#include <unistd.h>
 import "C"
-import "fmt"
+import (
+	"fmt"
+	"unsafe"
+)
 
 type jvmError int
 
@@ -18,3 +21,9 @@ func JVMError(i C.jint) (err error) {
 	}
 	return
 }
+
+//export TestingCallback
+func TestingCallback(unsafe.Pointer, unsafe.Pointer){
+	print("Testing callback...")
+}
+
