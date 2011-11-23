@@ -22,7 +22,7 @@ var formOfTests = []formForTest{
 	formForTest{types.Basic(types.ShortKind), []interface{}{int64(5)}, "(J)S", nil},
 	formForTest{types.Basic(types.BoolKind), []interface{}{int(0)}, "(I)Z", nil},
 	formForTest{types.Class{types.JavaLangObject}, []interface{}{int(0)}, "(I)Ljava/lang/Object;", nil},
-	formForTest{types.ArrayType{types.Basic(types.ByteKind)}, []interface{}{[]byte{1, 2, 3}}, "([B)[B", nil},
+	formForTest{types.Array{types.Basic(types.ByteKind)}, []interface{}{[]byte{1, 2, 3}}, "([B)[B", nil},
 }
 
 func TestTrivialFormFor(t *testing.T) {

@@ -54,12 +54,12 @@ func (self Class) Name() Name  { return self.Klass }
 
 // Java arrays consist of a single type (though the type itself could be
 // the generic 'Object' class
-type ArrayType struct {
+type Array struct {
 	Underlying Typed
 }
 
-func (self ArrayType) TypeString() string { return "[" + self.Underlying.TypeString() }
-func (self ArrayType) Kind() Kind  { return ArrayKind }
+func (self Array) TypeString() string { return "[" + self.Underlying.TypeString() }
+func (self Array) Kind() Kind  { return ArrayKind }
 
 type Kind int
 func (self Kind)TypeString()(string) {

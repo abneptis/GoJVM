@@ -57,9 +57,9 @@ func reflectedType(env *Environment, v interface{}) (k types.Typed, err error) {
 		sltype := vtype.Elem()
 		switch sltype.Kind() {
 		case reflect.Uint8:
-			k = types.ArrayType{types.Basic(types.ByteKind)}
+			k = types.Array{types.Basic(types.ByteKind)}
 		case reflect.String:
-			k = types.ArrayType{types.Class{types.JavaLangString}}
+			k = types.Array{types.Class{types.JavaLangString}}
 		default:
 			err = errors.New("Unhandled slice type " + sltype.String())
 		}

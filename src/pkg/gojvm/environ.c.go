@@ -663,7 +663,7 @@ func (self *Environment) callShort(z interface{}, static bool, name string, para
 
 func (self *Environment) ToString(strobj *Object) (str string, isNull bool, err error) {
 	var bytesObj *Object
-	bytesObj, err = self.CallObjectObj(strobj, false, "getBytes", types.ArrayType{types.Basic(types.ByteKind)}, self.utf8())
+	bytesObj, err = self.CallObjectObj(strobj, false, "getBytes", types.Array{types.Basic(types.ByteKind)}, self.utf8())
 	if err == nil && bytesObj == nil {
 		isNull = true
 		return
