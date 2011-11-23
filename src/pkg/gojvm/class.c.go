@@ -1,4 +1,4 @@
-package environment
+package gojvm
 
 //#cgo LDFLAGS:-ljvm	-L/usr/lib/jvm/java-6-sun/jre/lib/amd64/server/
 //#include "helpers.h"

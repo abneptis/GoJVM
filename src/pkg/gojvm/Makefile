@@ -2,22 +2,33 @@ include /usr/share/go/src/Make.inc
 TARG=gojvm
 
 
-JAVA_BASE=../../../java/
+JAVA_BASE=../../../java
+CGO_CFLAGS=-Iinclude/
 
 DEPS=\
-	environment\
+	types\
+	$(JAVA_BASE)\
 
 CGOFILES=\
-	consts.c.go\
-	jvm_init_args.c.go\
-	jvm_helpers.c.go\
+	arglist.c.go\
+	environ.c.go\
+	globals.c.go\
+	object.c.go\
+	class.c.go\
+	jvm.c.go\
+	method_sig_helpers.c.go\
 
 CGO_OFILES=\
-	jvm_init_helpers.o\
-#	jvm_env_helpers.o\
+  jvm_env_helpers.o\
+  jvm_jvm_helpers.o\
+  jvm_value_helpers.o\
+
 
 GOFILES=\
-	error.go\
+	method_signatures.go\
+	callback_descriptor.go\
+
+CLEANFILES+=\
 
 CLEANFILES+=\
 	$(JAVA_BASE)/org/golang/ext/gojvm/*.class\
@@ -25,16 +36,12 @@ CLEANFILES+=\
 
 TESTING_JAVA=\
 	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Cleaner.class\
+	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Native.class\
 	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Pathos.class\
 	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Trivial.class\
-	$(JAVA_BASE)/org/golang/ext/gojvm/testing/Native.class\
-
-DIST_JAVA=\
-	$(JAVA_BASE)/org/golang/ext/gojvm/Invokable.class\
 
 include /usr/share/go/src/Make.pkg
 
 java_classes: $(TESTING_JAVA) $(DIST_JAVA)
-
 %.class: %.java
-	javac $<
+	javac	$<

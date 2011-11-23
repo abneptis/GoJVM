@@ -1,4 +1,4 @@
-package environment
+package gojvm
 
 //#include "helpers.h"
 import "C"

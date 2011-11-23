@@ -1,4 +1,4 @@
-package environment
+package gojvm
 
 //#cgo CFLAGS:-I../include/
 //#cgo LDFLAGS:-ljvm	-L/usr/lib/jvm/java-6-sun/jre/lib/amd64/server/

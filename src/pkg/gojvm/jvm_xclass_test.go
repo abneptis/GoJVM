@@ -1,4 +1,4 @@
-package environment
+package gojvm
 
 /* Tests various external classes pre-disposed to have certain.. 'issues'
  */

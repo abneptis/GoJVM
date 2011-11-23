@@ -1,4 +1,4 @@
-package environment
+package gojvm
 /*
 	This file exists (and is named) primarily for common test functionality;
 	We also include the first SetupJVM call in here, so that it will not skew the timing
@@ -72,9 +72,9 @@ func setupJVM(t *testing.T) (env *Environment){
 		}
 		return
 	}
-	t.Logf("Testing -- using classpath [../../../../java/,%s", DefaultJREPath)
+	t.Logf("Testing -- using classpath [../../../java/,%s", DefaultJREPath)
 	var err error
-	_jvm, env, err = NewJVM(0, JvmConfig{[]string{"../../../../java/", DefaultJREPath}})
+	_jvm, env, err = NewJVM(0, JvmConfig{[]string{"../../../java/", DefaultJREPath}})
 	fatalIf(t, err != nil, "Error initializing JVM: %v", err)
 	fatalIf(t, _jvm == nil, "Got a nil context!")
 	// expected exceptions are pre-muted/unmuted, but if you're testing something
