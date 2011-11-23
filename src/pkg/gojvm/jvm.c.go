@@ -5,9 +5,9 @@ import "C"
 
 import (
 	"errors"
+	"gojvm/types"
 	"strings"
 	"unsafe"
-	"gojvm/types"
 )
 
 const (
@@ -23,22 +23,22 @@ const SunJREPath = "/usr/lib/jvm/java-6-sun/jre/lib"
 
 var DefaultJREPath = SystemDefaultJREPath
 
-
 type JVM struct {
-	jvm *C.JavaVM
-	registered	map[int]callbackDescriptor
-	regId		int
+	jvm        *C.JavaVM
+	registered map[int]callbackDescriptor
+	regId      int
 }
 
-
-func (self *JVM)addNative(env *Environment, f interface{})(id int, csig types.MethodSignature, err error){
-//func CallbackSignature(f interface{})(sig MethodSignature, err error){
+func (self *JVM) addNative(env *Environment, f interface{}) (id int, csig types.MethodSignature, err error) {
+	//func CallbackSignature(f interface{})(sig MethodSignature, err error){
 	cbd, err := CallbackDescriptor(env, f)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	/// todo, this is not thread safe...
 	id = self.regId
 	self.registered[id] = cbd
-	self.regId ++
+	self.regId++
 	csig = cbd.Signature
 	//log.Printf("Calculated signature: %v", csig)
 	/// TODO
@@ -50,7 +50,7 @@ func (self *JVM)addNative(env *Environment, f interface{})(id int, csig types.Me
 	thread to use.  It is safe to call multiply (idempotent), and can be returned 
 	via DetachCurrentThread (not idempotent!)
 */
-func (self *JVM)AttachCurrentThread()(env *Environment, err error){
+func (self *JVM) AttachCurrentThread() (env *Environment, err error) {
 	env = NewEnvironment(self)
 	//print ("Allocated environment for thread\t", env.Ptr(),"\n")
 	if 0 != C.vmAttachCurrentThread(self.jvm, env.Ptr(), nil) {
@@ -65,9 +65,9 @@ func (self *JVM)AttachCurrentThread()(env *Environment, err error){
 // environment pointer.  Depending on the exact JDK version, there are differing semantics
 // on whether the 'original' thread can call this (else JVM Shutdown), but most modern
 // stacks (>=1.2) should allow this from the 'main' thread.
-func (self *JVM)DetachCurrentThread()(err error){
+func (self *JVM) DetachCurrentThread() (err error) {
 	if 0 != C.vmDetachCurrentThread(self.jvm) {
-		err = errors.New("Couldn't attach thread (and thus cannot gather exception)")	
+		err = errors.New("Couldn't attach thread (and thus cannot gather exception)")
 	} else {
 		print("TODO: DetachCurrentThread - don't know which thread I am :-( (cant be unmapped)\n")
 	}
@@ -75,7 +75,7 @@ func (self *JVM)DetachCurrentThread()(err error){
 }
 
 type JvmConfig struct {
-	ClassPath	[]string
+	ClassPath []string
 }
 
 func NewJVM(ver int, conf JvmConfig) (jvm *JVM, env *Environment, err error) {
@@ -100,8 +100,6 @@ func NewJVM(ver int, conf JvmConfig) (jvm *JVM, env *Environment, err error) {
 	}
 	return
 }
-
-
 
 func defaultJVMArgs(ver int) (args *C.JavaVMInitArgs, err error) {
 	if ver == 0 {

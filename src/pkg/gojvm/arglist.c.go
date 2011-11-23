@@ -15,7 +15,6 @@ import (
 // for passing arguments _into_ java.
 type argList []C.jvalue
 
-
 /// Returns an unsafe.Pointer to the arglist, suitable 
 /// for passing to the JNI xxxA() variadic methods.
 /// The pointer is only valid at the time it is returned,
@@ -33,12 +32,11 @@ func (self *argList) Ptr() unsafe.Pointer {
 }
 
 /* dereferences objects in a list, useful for deferrals */
-func blowStack(env *Environment, objs []*Object){
-	for _, obj := range(objs){
+func blowStack(env *Environment, objs []*Object) {
+	for _, obj := range objs {
 		env.DeleteLocalRef(obj)
 	}
 }
-
 
 //	TODO(refcounting): any constructed objects will be leaked on call return, 
 //	as nothing cleans up proxy objects.  I'm also torn on how to differentiate
@@ -50,7 +48,7 @@ func blowStack(env *Environment, objs []*Object){
 //	On error, the stack has already been blown (and will be empty).
 func newArgList(ctx *Environment, params ...interface{}) (alp argList, objStack []*Object, err error) {
 	alp = make(argList, 0)
-	defer func(){
+	defer func() {
 		if err != nil {
 			blowStack(ctx, objStack)
 			objStack = []*Object{}
@@ -86,29 +84,29 @@ func newArgList(ctx *Environment, params ...interface{}) (alp argList, objStack 
 			}
 		case []string:
 			var klass *Class
-			var	obj	  *Object
-		 	klass, err = ctx.GetClassStr("java/lang/String")
-		 	// classes via this channel are cached and globally referenced by gojvm, not stacked.
+			var obj *Object
+			klass, err = ctx.GetClassStr("java/lang/String")
+			// classes via this channel are cached and globally referenced by gojvm, not stacked.
 			if err == nil {
 				obj, err = ctx.newObjectArray(len(v), klass, nil)
 			}
 			if err == nil {
 				objStack = append(objStack, obj)
-				for i, s := range(v){
+				for i, s := range v {
 					var str *Object
 					str, err = ctx.NewStringObject(s)
 					if err == nil {
-		  				// I'm assuming stuffing the array adds a reference inside the JVM.
-		  				defer ctx.DeleteLocalRef(str)
-	  					ctx.setObjectArrayElement(obj, i, str)
-	  					if ctx.ExceptionCheck(){
-	  						err = ctx.ExceptionOccurred()
-	  					}
-	  					
-	  				}
-	  				if err != nil {
-	  					break
-	  				}
+						// I'm assuming stuffing the array adds a reference inside the JVM.
+						defer ctx.DeleteLocalRef(str)
+						ctx.setObjectArrayElement(obj, i, str)
+						if ctx.ExceptionCheck() {
+							err = ctx.ExceptionOccurred()
+						}
+
+					}
+					if err != nil {
+						break
+					}
 				}
 			}
 			if err == nil {
@@ -146,4 +144,3 @@ func newArgList(ctx *Environment, params ...interface{}) (alp argList, objStack 
 type Value struct {
 	val C.jvalue
 }
-

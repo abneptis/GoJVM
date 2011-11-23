@@ -10,11 +10,9 @@ import (
 	"unsafe"
 )
 
-
-
 type callbacks struct {
 	calls map[int]interface{}
-	next int
+	next  int
 }
 
 var cCallbacks = callbacks{map[int]interface{}{}, 0}
@@ -26,7 +24,7 @@ func findCCallback(p int) (i interface{}) {
 	return
 }
 
-func addGoCallback(fptr interface{})(id int){
+func addGoCallback(fptr interface{}) (id int) {
 	id = cCallbacks.next
 	cCallbacks.next += 1
 	cCallbacks.calls[id] = fptr
@@ -34,7 +32,7 @@ func addGoCallback(fptr interface{})(id int){
 }
 
 //export callCCallback
-func callCCallback(eptr unsafe.Pointer, ptr unsafe.Pointer, id int){
+func callCCallback(eptr unsafe.Pointer, ptr unsafe.Pointer, id int) {
 	cb := findCCallback(id)
 	if cb != nil {
 		print("Callback known")

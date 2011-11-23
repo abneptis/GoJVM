@@ -5,9 +5,9 @@ package gojvm
 	of other tests regardless of other jvm_XX_test files
 */
 import (
-	"testing"
 	"flag"
 	"sync"
+	"testing"
 )
 
 func fatalIf(t *testing.T, tv bool, msg string, args ...interface{}) {
@@ -18,12 +18,12 @@ func fatalIf(t *testing.T, tv bool, msg string, args ...interface{}) {
 
 func fatalEquals(t *testing.T, val interface{}, val2 interface{}, msg string, args ...interface{}) {
 	args = append(args, []interface{}{val, val2}...)
-	fatalIf(t, val == val2, msg + " (%v == %v)", args...)
+	fatalIf(t, val == val2, msg+" (%v == %v)", args...)
 }
 
 func fatalInEq(t *testing.T, val interface{}, val2 interface{}, msg string, args ...interface{}) {
 	args = append(args, []interface{}{val, val2}...)
-	fatalIf(t, val != val2, msg + " (Expected: %v;\t Got: %v)", args...)
+	fatalIf(t, val != val2, msg+" (Expected: %v;\t Got: %v)", args...)
 }
 
 var SystemClass = "java/lang/System"
@@ -33,7 +33,6 @@ func systemClass(env *Environment, t *testing.T) (c *Class) {
 	fatalIf(t, err != nil, "Error loading system class: %v", err)
 	return
 }
-
 
 var _jvm *JVM
 var squelchExceptions bool /* = false */
@@ -49,19 +48,17 @@ var squelchExceptions bool /* = false */
 // regardless othe explicit 'mutedness'.
 // there is a race condition here, but you're not supposed
 // to be using *Environment in multiple threads anyhow :P
-func defMute(env *Environment)(func()){
-  muted := env.Muted()
-  env.Mute(true)
-  return func(){
-    env.Mute(muted)
-  }
+func defMute(env *Environment) func() {
+	muted := env.Muted()
+	env.Mute(true)
+	return func() {
+		env.Mute(muted)
+	}
 }
 
-
-
-
 var startLock = &sync.Mutex{}
-func setupJVM(t *testing.T) (env *Environment){
+
+func setupJVM(t *testing.T) (env *Environment) {
 	startLock.Lock()
 	defer startLock.Unlock()
 	if _jvm != nil {
@@ -87,8 +84,7 @@ func setupJVM(t *testing.T) (env *Environment){
 // so the timing of other tests/bench's isn't thrown.
 func TestJVMFirst(t *testing.T) { setupJVM(t) }
 
-
-func init(){
+func init() {
 	// this only works if you run it directly (not in the gotest framework, as it does not inherit options)
 	flag.BoolVar(&squelchExceptions, "squelch-ex", squelchExceptions, "Squelch unexpected exceptions from printing")
 }

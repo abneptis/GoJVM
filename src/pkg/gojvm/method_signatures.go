@@ -2,14 +2,14 @@ package gojvm
 
 import (
 	"gojvm/types"
-//	"reflect"
-//	"log"
+	//	"reflect"
+	//	"log"
 )
 
 /* 
 	Returns the signature string for the configured environment, return type and parameters
 	(exported for convenience) ;
-	
+
 	Reflection is handled by ParameterString
 */
 func FormFor(ctx *Environment, ret types.Typed, params ...interface{}) (s string, err error) {
@@ -28,7 +28,7 @@ func formFor(ctx *Environment, ret types.Typed, params ...interface{}) (s string
 /*
 	Returns an array of types.Typeds matching the params list (which may be empty, resulting
 	in a valid empty (nil) list of types.Typeds).
-	
+
 	Reflection is done by TypeOf.
 
 	* Environment is required in order to interpolate abstract objects into
@@ -58,4 +58,3 @@ func ParameterString(ctx *Environment, params ...interface{}) (s string, err err
 	}
 	return
 }
-

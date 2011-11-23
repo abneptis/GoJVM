@@ -1,10 +1,10 @@
 package gojvm
 
 import (
-	"testing"
 	"math/rand"
 	"strconv"
-	"strings"	
+	"strings"
+	"testing"
 )
 
 var simpleStringTests = []string{
@@ -37,8 +37,7 @@ func TestJVMNewString(t *testing.T) {
 	}
 }
 
-
-var someWords = strings.Split("Mary had a little lamb whose fleece was white as snow and every where that mary went the lamb was sure to go"," ")
+var someWords = strings.Split("Mary had a little lamb whose fleece was white as snow and every where that mary went the lamb was sure to go", " ")
 
 // just a reference value for giving relative measures
 // not a fair comparison to 'pure' JVM
@@ -46,7 +45,7 @@ func BenchmarkGoShortStringsReference(b *testing.B) {
 	ll := int64(0)
 	words := len(someWords)
 	for i := 0; i < b.N; i++ {
-		str := someWords[rand.Int() % words] + strconv.Itoa(i)
+		str := someWords[rand.Int()%words] + strconv.Itoa(i)
 		ll += int64(len(str))
 	}
 	b.SetBytes(ll)
@@ -59,17 +58,16 @@ func BenchmarkShortStrings(b *testing.B) {
 	ll := int64(0)
 	words := len(someWords)
 	for i := 0; i < b.N; i++ {
-		str := someWords[rand.Int() % words] + strconv.Itoa(i)
+		str := someWords[rand.Int()%words] + strconv.Itoa(i)
 		obj, err := env.NewStringObject(str)
 		if err == nil {
 			env.DeleteLocalRef(obj)
 			ll += int64(len(str))
 		} // else why didn't the tests fail...
 	}
-	
+
 	b.SetBytes(ll)
 }
-
 
 // Benchmarks a long string conversion (but under a page)
 func BenchmarkLongStrings(b *testing.B) {
@@ -81,7 +79,7 @@ func BenchmarkLongStrings(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		str := ""
 		for j := 0; j < wordsPer; j++ {
-			str += someWords[rand.Int() % words]
+			str += someWords[rand.Int()%words]
 		}
 		obj, err := env.NewStringObject(str)
 		if err == nil {
@@ -89,10 +87,9 @@ func BenchmarkLongStrings(b *testing.B) {
 			ll += int64(len(str))
 		} // else why didn't the tests fail...
 	}
-	
+
 	b.SetBytes(ll)
 }
-
 
 // Benchmarks a very long string conversion (~2 pages, possibly 3)
 func BenchmarkVeryLongStrings(b *testing.B) {
@@ -104,7 +101,7 @@ func BenchmarkVeryLongStrings(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		str := ""
 		for j := 0; j < wordsPer; j++ {
-			str += someWords[rand.Int() % words]
+			str += someWords[rand.Int()%words]
 		}
 		obj, err := env.NewStringObject(str)
 		if err == nil {
@@ -112,7 +109,6 @@ func BenchmarkVeryLongStrings(b *testing.B) {
 			ll += int64(len(str))
 		} // else why didn't the tests fail...
 	}
-	
+
 	b.SetBytes(ll)
 }
-

@@ -3,8 +3,8 @@ package gojvm
 /* Tests various external classes pre-disposed to have certain.. 'issues'
  */
 import (
-	"testing"
 	"gojvm/types"
+	"testing"
 )
 
 var TrivialClass = "org/golang/ext/gojvm/testing/Trivial"
@@ -25,7 +25,6 @@ var NativeClass = "org/golang/ext/gojvm/testing/Native"
 /* 
 	Has attachable native methods
 */
-
 
 /* Doesn't exist
 
@@ -78,7 +77,6 @@ func TestJVMMissingClass(t *testing.T) {
 	fatalIf(t, err == nil, "Missing didn't throw an exception")
 }
 
-
 func TestJVMNativeVoidClass(t *testing.T) {
 	env := setupJVM(t)
 	//defer defMute(env)()
@@ -86,7 +84,7 @@ func TestJVMNativeVoidClass(t *testing.T) {
 	klass, err := env.GetClassStr(NativeClass)
 	fatalIf(t, err != nil, "Native threw an exception", err)
 	fatalIf(t, klass == nil, "Native klass is nil!")
-	err = env.RegisterNative(klass, "NativePing", func(E *Environment, O *Object){
+	err = env.RegisterNative(klass, "NativePing", func(E *Environment, O *Object) {
 		nativePings += 1
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
@@ -104,7 +102,7 @@ func TestJVMNativeIntClass(t *testing.T) {
 	klass, err := env.GetClassStr(NativeClass)
 	fatalIf(t, err != nil, "Native threw an exception", err)
 	fatalIf(t, klass == nil, "Native klass is nil!")
-	err = env.RegisterNative(klass, "NativeInt", func(E *Environment, O *Object)(i int){
+	err = env.RegisterNative(klass, "NativeInt", func(E *Environment, O *Object) (i int) {
 		return 15
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
@@ -127,7 +125,7 @@ func TestJVMNativeComplexClass(t *testing.T) {
 	obj2, err := env.NewInstanceStr("java/lang/Object")
 	fatalIf(t, err != nil, "new(Object2) threw an exception", err)
 	hit := false
-	err = env.RegisterNative(klass, "NativeComplex", func(E *Environment, O *Object, o1 *Object, o2 *Object, i1 int)(){
+	err = env.RegisterNative(klass, "NativeComplex", func(E *Environment, O *Object, o1 *Object, o2 *Object, i1 int) {
 		hit = true
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
@@ -139,7 +137,6 @@ func TestJVMNativeComplexClass(t *testing.T) {
 	fatalIf(t, !hit, "Native complex never got called", err)
 }
 
-
 func TestJVMNativeBoolClass(t *testing.T) {
 	env := setupJVM(t)
 	//defer defMute(env)()
@@ -147,7 +144,7 @@ func TestJVMNativeBoolClass(t *testing.T) {
 	fatalIf(t, err != nil, "Native threw an exception", err)
 	fatalIf(t, klass == nil, "Native klass is nil!")
 	hit := false
-	err = env.RegisterNative(klass, "NativeBool", func(E *Environment, O *Object)(bool){
+	err = env.RegisterNative(klass, "NativeBool", func(E *Environment, O *Object) bool {
 		return !hit
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
@@ -170,7 +167,7 @@ func TestJVMNativeLongClass(t *testing.T) {
 	fatalIf(t, err != nil, "Native threw an exception", err)
 	fatalIf(t, klass == nil, "Native klass is nil!")
 	hit := int64(0)
-	err = env.RegisterNative(klass, "NativeLong", func(E *Environment, O *Object)(int64){
+	err = env.RegisterNative(klass, "NativeLong", func(E *Environment, O *Object) int64 {
 		return hit
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
@@ -193,7 +190,7 @@ func TestJVMNativeFloatClass(t *testing.T) {
 	fatalIf(t, err != nil, "Native threw an exception", err)
 	fatalIf(t, klass == nil, "Native klass is nil!")
 	hit := float32(.1234)
-	err = env.RegisterNative(klass, "NativeFloat", func(E *Environment, O *Object)(float32){
+	err = env.RegisterNative(klass, "NativeFloat", func(E *Environment, O *Object) float32 {
 		return hit
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
@@ -203,7 +200,7 @@ func TestJVMNativeFloatClass(t *testing.T) {
 	ok, err := obj.CallFloat(env, false, "NativeFloat")
 	fatalIf(t, err != nil, "Couldn't call NativeClass.NativeFloat(): %v", err)
 	fatalIf(t, ok != hit, "NativeLong got wrong value: %d", ok)
-	hit = 1/20
+	hit = 1 / 20
 	ok, err = obj.CallFloat(env, false, "NativeFloat")
 	fatalIf(t, err != nil, "Couldn't call NativeClass.NativeFloat(): %v", err)
 	fatalIf(t, ok != hit, "NativeFloat got wrong value: %d", ok)
@@ -216,7 +213,7 @@ func TestJVMNativeShortClass(t *testing.T) {
 	fatalIf(t, err != nil, "Native threw an exception", err)
 	fatalIf(t, klass == nil, "Native klass is nil!")
 	hit := int16(0)
-	err = env.RegisterNative(klass, "NativeShort", func(E *Environment, O *Object)(int16){
+	err = env.RegisterNative(klass, "NativeShort", func(E *Environment, O *Object) int16 {
 		return hit
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
@@ -239,7 +236,7 @@ func TestJVMNativeDoubleClass(t *testing.T) {
 	fatalIf(t, err != nil, "Native threw an exception", err)
 	fatalIf(t, klass == nil, "Native klass is nil!")
 	hit := float64(1234)
-	err = env.RegisterNative(klass, "NativeDouble", func(E *Environment, O *Object)(float64){
+	err = env.RegisterNative(klass, "NativeDouble", func(E *Environment, O *Object) float64 {
 		return hit
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
@@ -250,7 +247,7 @@ func TestJVMNativeDoubleClass(t *testing.T) {
 	ok, err := obj.CallDouble(env, false, "NativeDouble")
 	fatalIf(t, err != nil, "Couldn't call NativeClass.NativeDouble(): %v", err)
 	fatalIf(t, ok != hit, "NativeDouble got wrong value: %d", ok)
-	hit = float64(-125/7)
+	hit = float64(-125 / 7)
 	ok, err = obj.CallDouble(env, false, "NativeDouble")
 	fatalIf(t, err != nil, "Couldn't call NativeClass.NativeDouble(): %v", err)
 	fatalIf(t, ok != hit, "NativeDouble got wrong value: %d", ok)
@@ -263,18 +260,18 @@ func TestJVMNativeStringClass(t *testing.T) {
 	fatalIf(t, err != nil, "Native threw an exception", err)
 	fatalIf(t, klass == nil, "Native klass is nil!")
 	s := "test-string"
-	err = env.RegisterNative(klass, "NativeString", func(E *Environment, O *Object)(string){
+	err = env.RegisterNative(klass, "NativeString", func(E *Environment, O *Object) string {
 		return s
 	})
 	fatalIf(t, err != nil, "RegisterNative threw an exception", err)
 	obj, err := env.NewInstanceStr(NativeClass)
 	fatalIf(t, err != nil, "Couldn't instantiate NativeClass: %v", err)
 	fatalIf(t, obj == nil, "Instantiated NativeClass is nil")
-	ok,_, err := obj.CallString(env, false, "NativeString")
+	ok, _, err := obj.CallString(env, false, "NativeString")
 	fatalIf(t, err != nil, "Couldn't call NativeClass.NativeString(): %v", err)
 	fatalIf(t, ok != s, "NativeString got wrong value: %d", ok)
 	s = "testStr2"
-	ok,_, err = obj.CallString(env, false, "NativeString")
+	ok, _, err = obj.CallString(env, false, "NativeString")
 	fatalIf(t, err != nil, "Couldn't call NativeClass.NativeString(): %v", err)
 	fatalIf(t, ok != s, "NativeString got wrong value: %d", ok)
 }
@@ -294,7 +291,7 @@ func BenchmarkJVMNativePing(b *testing.B) {
 		print("benchmark failed: ", err.Error(), "\n")
 		return
 	}
-	err = env.RegisterNative(klass, "NativePing", func(E *Environment, O *Object){
+	err = env.RegisterNative(klass, "NativePing", func(E *Environment, O *Object) {
 		nativePings += 1
 	})
 	if err != nil {
@@ -307,12 +304,11 @@ func BenchmarkJVMNativePing(b *testing.B) {
 		return
 	}
 	ll := int64(0)
-	for i := 0; i < b.N; i++{
+	for i := 0; i < b.N; i++ {
 		obj.CallVoid(env, false, "NativePing")
 		ll += 1
 	}
 	env.DeleteLocalRef(obj)
-	
+
 	b.SetBytes(ll)
 }
-

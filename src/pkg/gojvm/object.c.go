@@ -13,8 +13,6 @@ type Object struct {
 	object C.jobject
 }
 
-
-
 // returns a new object value with specified parameters
 // NB: refs are NOT adjusted directly by this call! Use it as a casting/construction-helper,
 // not a Clone()
@@ -45,7 +43,6 @@ func (self *Object) ClassName(env *Environment) (name types.ClassName, err error
 	return
 }
 
-
 func (self *Object) CallVoid(env *Environment, static bool, mname string, params ...interface{}) (err error) {
 	return env.CallObjectVoid(self, static, mname, params...)
 }
@@ -73,7 +70,6 @@ func (self *Object) CallShort(env *Environment, static bool, mname string, param
 func (self *Object) CallDouble(env *Environment, static bool, mname string, params ...interface{}) (i float64, err error) {
 	return env.CallObjectDouble(self, static, mname, params...)
 }
-
 
 // Calls the named Object-method on the object instance
 func (self *Object) CallObj(env *Environment, static bool, mname string, rval types.Typed, params ...interface{}) (vObj *Object, err error) {
