@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-var CleanerClass = types.ClassName{"org", "golang", "ext", "gojvm", "testing", "Cleaner"}
-var CleanableClass = types.ClassName{"org", "golang", "ext", "gojvm", "testing", "Cleaner$Cleanable"}
+var CleanerClass = types.Name{"org", "golang", "ext", "gojvm", "testing", "Cleaner"}
+var CleanableClass = types.Name{"org", "golang", "ext", "gojvm", "testing", "Cleaner$Cleanable"}
 
 // tests basic 'created & destroyed' semantics of our interaction w. the JVM.
 // a better test would put some objects through their paces, release, and 'somehow'

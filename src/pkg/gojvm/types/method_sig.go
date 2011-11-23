@@ -45,12 +45,12 @@ func (self Basic) Kind() Kind  { return Kind(self) }
 
 // a 'Class' is a Java Class name type  a la "Lclass/path/name;"
 type Class struct {
-	Klass ClassName
+	Klass Name
 }
 
 func (self Class) TypeString() string { return "L" + self.Klass.AsPath() + ";" }
 func (self Class) Kind() Kind  { return ClassKind }
-func (self Class) ClassName() ClassName  { return self.Klass }
+func (self Class) Name() Name  { return self.Klass }
 
 // Java arrays consist of a single type (though the type itself could be
 // the generic 'Object' class

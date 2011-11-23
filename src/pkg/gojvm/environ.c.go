@@ -131,7 +131,7 @@ type Method struct {
 	method C.jmethodID
 }
 
-func (self *Environment) findCachedClass(klass types.ClassName) (c *Class, err error) {
+func (self *Environment) findCachedClass(klass types.Name) (c *Class, err error) {
 	if class, ok := self.classes[klass.AsPath()]; ok {
 		c = class
 	} else {
@@ -183,10 +183,10 @@ func (self *Environment) newByteObject(bts []byte) (o *Object, err error) {
 }
 
 /* 
-	returns a new *Object of the class named by 'klass' (Wrapper around NewInstance(types.NewClassName(...)))
+	returns a new *Object of the class named by 'klass' (Wrapper around NewInstance(types.NewName(...)))
 */
 func (self *Environment) NewInstanceStr(klass string, params ...interface{}) (obj *Object, err error) {
-	class, err := self.GetClass(types.NewClassName(klass))
+	class, err := self.GetClass(types.NewName(klass))
 	if err != nil {
 		return
 	}
@@ -219,7 +219,7 @@ func (self *Environment) NewInstance(c *Class, params ...interface{}) (o *Object
 // hold a global ref.
 //
 // TODO: in truth, they should probably ALL be local-refs of the cached one...
-func (self *Environment) GetClass(klass types.ClassName) (c *Class, err error) {
+func (self *Environment) GetClass(klass types.Name) (c *Class, err error) {
 	c, err = self.findCachedClass(klass)
 	if err == nil {
 		return
@@ -241,9 +241,9 @@ func (self *Environment) GetClass(klass types.ClassName) (c *Class, err error) {
 	return
 }
 
-// Wrapper around GetClass(types.NewClassName(...))
+// Wrapper around GetClass(types.NewName(...))
 func (self *Environment) GetClassStr(klass string) (c *Class, err error) {
-	class := types.NewClassName(klass)
+	class := types.NewName(klass)
 	return self.GetClass(class)
 }
 

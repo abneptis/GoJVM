@@ -31,7 +31,7 @@ func (self *Object) ObjectClass(env *Environment) (c *Class, err error) {
 	Returns the (potentially cached) name of the ObjectClass of the
 	named object.
 */
-func (self *Object) ClassName(env *Environment) (name types.ClassName, err error) {
+func (self *Object) Name(env *Environment) (name types.Name, err error) {
 	var c *Class
 	c, err = self.ObjectClass(env)
 	if err == nil {

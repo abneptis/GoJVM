@@ -18,14 +18,14 @@ func newClass(class C.jclass) *Class {
 }
 
 /*
-	returns the (potentially cached) types.ClassName of the class.
+	returns the (potentially cached) types.Name of the class.
 */
-func (self *Class) GetName(env *Environment) (name types.ClassName, err error) {
-	//log.Printf("ClassName(miss)")
+func (self *Class) GetName(env *Environment) (name types.Name, err error) {
+	//log.Printf("Name(miss)")
 	var cstr string
 	cstr, _, err = self.CallString(env, false, "getName")
 	if err == nil {
-		name = types.NewClassName(cstr)
+		name = types.NewName(cstr)
 	}
 	return
 }
