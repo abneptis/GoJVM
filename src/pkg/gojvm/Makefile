@@ -25,8 +25,8 @@ CGO_OFILES=\
 
 
 GOFILES=\
-	method_signatures.go\
 	callback_descriptor.go\
+	param_reflection.go\
 
 CLEANFILES+=\
 
