@@ -263,7 +263,7 @@ func (self *Environment) _objMethod(obj *Object, name string, jt types.Typed, pa
 	if err != nil {
 		return
 	}
-	form, err := formFor(self, jt, params...)
+	form, err := FormFor(self, jt, params...)
 	if err != nil {
 		return
 	}
@@ -284,7 +284,7 @@ func (self *Environment) _objMethod(obj *Object, name string, jt types.Typed, pa
 }
 
 func (self *Environment) _classMethod(class *Class, name string, jt types.Typed, params ...interface{}) (meth *Method, err error) {
-	form, err := formFor(self, jt, params...)
+	form, err := FormFor(self, jt, params...)
 	if err != nil {
 		return
 	}
@@ -304,7 +304,7 @@ func (self *Environment) _classMethod(class *Class, name string, jt types.Typed,
 }
 
 func (self *Environment) _classStaticMethod(class *Class, name string, jt types.Typed, params ...interface{}) (meth *Method, err error) {
-	form, err := formFor(self, jt, params...)
+	form, err := FormFor(self, jt, params...)
 	if err != nil {
 		return
 	}

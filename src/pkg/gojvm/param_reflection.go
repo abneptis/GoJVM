@@ -13,11 +13,6 @@ import (
 	Reflection is handled by ParameterString
 */
 func FormFor(ctx *Environment, ret types.Typed, params ...interface{}) (s string, err error) {
-	return formFor(ctx, ret, params...)
-}
-
-// documented as FormFor
-func formFor(ctx *Environment, ret types.Typed, params ...interface{}) (s string, err error) {
 	s, err = ParameterString(ctx, params...)
 	if err == nil {
 		s = s + ret.TypeString()
