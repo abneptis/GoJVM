@@ -32,5 +32,12 @@ func TestTrivialFormFor(t *testing.T) {
 		fatalIf(t, err != test.eerror, "[%d] Unexpected error %v", i, err)
 		fatalIf(t, form != test.eform, "[%d] Unexpected form  (got %s, wanted %s)", i, form, test.eform)
 	}
+}
 
+func BenchmarkFormFor(b *testing.B){
+	env := setupJVM(nil)
+	lft := len(formOfTests)
+	for i := 0; i < b.N; i++ {
+		FormFor(env, formOfTests[i%lft].rtype, formOfTests[i%lft].params...)	
+	}
 }
