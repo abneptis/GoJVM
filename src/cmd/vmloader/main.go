@@ -23,19 +23,18 @@ func main(){
 		log.Fatalf("Expected: %s 'class-with-main'", "vmloader")
 	}
 	print("Initializing VM\n")
- 	ctx, err := gojvm.InitializeJVM(0,[]string{cpBase,jrePath})
+ 	_, env, err := gojvm.NewJVM(0, gojvm.JvmConfig{[]string{cpBase,jrePath}})
  	if err != nil {
 		log.Fatalf("err == %s", err)
 	}
 	klass := flag.Arg(0)
-	log.Printf("Ctx: %+v", ctx)
-	inst, err := ctx.Env.GetClassStr(klass)
+	inst, err := env.GetClassStr(klass)
 
  	if err != nil {
 		log.Fatalf("Couldn't find class %s", err)
 	}
 	log.Printf("Got instance: %+v", inst)
-	err = inst.CallVoid(true, "main", []string{})
+	err = inst.CallVoid(env, true, "main", []string{})
  	if err != nil {
 		log.Fatalf("Couldn't call main: %v", err)
 	}
